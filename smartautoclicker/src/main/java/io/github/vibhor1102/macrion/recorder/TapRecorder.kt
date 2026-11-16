@@ -188,7 +188,8 @@ object TapRecorder {
                 is Step.Element -> TapElement(
                     id = newId(), eventId = eventId, name = "${index + 1}. ${step.label}".take(NAME_MAX_LENGTH),
                     priority = actions.size, selectorType = step.type, selectorValue = step.value,
-                    timeoutMs = RECORDED_TAP_TIMEOUT_MS,
+                    // The app may first ask for a fingerprint or a PIN when opened: leave the user time for it.
+                    timeoutMs = if (index == 0) FIRST_TAP_TIMEOUT_MS else RECORDED_TAP_TIMEOUT_MS,
                 )
                 is Step.Position -> Click(
                     id = newId(), eventId = eventId, name = "${index + 1}. (${step.x}, ${step.y})",
@@ -318,6 +319,7 @@ private const val TEXT_MAX_LENGTH = 40
 private const val NAME_MAX_LENGTH = 50
 private const val CHILD_TEXT_MAX_DEPTH = 4
 private const val RECORDED_TAP_TIMEOUT_MS = 10_000L
+private const val FIRST_TAP_TIMEOUT_MS = 30_000L
 private const val START_DELAY_MS = 300L
 private const val POSITION_PRESS_DURATION_MS = 50L
 private const val POSITION_WAIT_BEFORE_MS = 1_500L
