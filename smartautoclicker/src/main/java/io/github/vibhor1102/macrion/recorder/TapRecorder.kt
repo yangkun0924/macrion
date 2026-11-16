@@ -112,6 +112,7 @@ object TapRecorder {
     fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (!_isRecording.value || event == null) return
         val pkg = event.packageName?.toString() ?: return
+        Log.d(TAG, "Event ${AccessibilityEvent.eventTypeToString(event.eventType)} from $pkg")
         if (pkg in ignoredPackages || pkg.isSystemOverlayPackage()) return
 
         // The app to launch is the one of the first real tap made in a regular app window. Window changes are not used
@@ -268,7 +269,7 @@ object TapRecorder {
         val service = serviceRef?.get() ?: return
         // Only remove the event types added for the recording: other flags may have changed meanwhile.
         service.serviceInfo?.let { info ->
-            info.eventTypes = originalEventTypes and RECORDED_EVENT_TYPES.inv()
+            info.eventTypes = originalEventTypes
             info.flags = originalFlags
             service.serviceInfo = info
         }
