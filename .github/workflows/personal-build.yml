@@ -35,7 +35,7 @@ jobs:
         cp ci/debug.keystore ~/.android/debug.keystore
 
     - name: Build debug APK
-      run: ./gradlew --no-daemon --max-workers=4 :smartautoclicker:assembleFDroidDebug
+      run: ./gradlew --no-daemon --max-workers=4 --continue :smartautoclicker:assembleFDroidDebug
       env:
         JAVA_TOOL_OPTIONS: -Djava.net.preferIPv4Stack=true
 
