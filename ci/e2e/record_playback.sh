@@ -20,7 +20,14 @@ RESULT="$OUT/result.txt"
 : > "$RESULT"
 
 log() { echo "== $*" | tee -a "$RESULT"; }
-fail() { log "FAIL: $*"; dump "fail"; adb logcat -d > "$OUT/logcat.txt"; exit 1; }
+fail() {
+  log "FAIL: $*"; dump "fail"
+  adb logcat -d > "$OUT/logcat.txt"
+  echo "--- relevant logcat"
+  grep -E "TapRecorder|RecorderAction|ShortcutLauncher|SmartAutoClicker|LocalService|DetectorEngine|ScenarioProcessor|ElementTap|AndroidRuntime|FATAL|macrion" "$OUT/logcat.txt" \
+    | grep -v -E "StrictMode|chatty" | tail -150
+  exit 1
+}
 
 # Screenshot + UI dump, numbered so the artifact reads in order.
 dump() {
@@ -109,6 +116,8 @@ if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(add automatically|add|add to home
   adb shell input tap $pos; sleep 2; log "home screen shortcut accepted"
 fi
 
+echo "--- recorder logcat"
+adb logcat -d | grep -E "TapRecorder|RecorderAction|AndroidRuntime" | tail -40
 DB=$(adb shell ls /data/data/$PKG/databases/ | tr -d '\r' | grep -v -E "journal|wal|shm" | head -1)
 log "database: $DB"
 adb shell "sqlite3 /data/data/$PKG/databases/$DB '.tables'" | tee -a "$RESULT"

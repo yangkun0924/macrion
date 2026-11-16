@@ -238,6 +238,8 @@ class SmartAutoClickerService : AccessibilityService() {
 
         requestFilterKeyEvents(false)
         stopForeground(STOP_FOREGROUND_REMOVE)
+        // Also removes the notification shown without foreground service (scenario without screen capture).
+        getSystemService(android.app.NotificationManager::class.java)?.cancel(NotificationIds.FOREGROUND_SERVICE_NOTIFICATION_ID)
 
         displayConfigManager.stopMonitoring()
         bitmapManager.clearCache()
@@ -249,6 +251,8 @@ class SmartAutoClickerService : AccessibilityService() {
         actionExecutor.resetState()
         requestFilterKeyEvents(false)
         stopForeground(STOP_FOREGROUND_REMOVE)
+        // Also removes the notification shown without foreground service (scenario without screen capture).
+        getSystemService(android.app.NotificationManager::class.java)?.cancel(NotificationIds.FOREGROUND_SERVICE_NOTIFICATION_ID)
         displayConfigManager.stopMonitoring()
         bitmapManager.clearCache()
     }
