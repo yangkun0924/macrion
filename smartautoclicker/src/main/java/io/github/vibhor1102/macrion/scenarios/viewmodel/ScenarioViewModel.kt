@@ -30,6 +30,7 @@ import androidx.lifecycle.viewModelScope
 import io.github.vibhor1102.macrion.core.base.data.AppComponentsProvider
 import io.github.vibhor1102.macrion.core.common.accessibility.domain.LocalAccessibilityServiceConnection
 import io.github.vibhor1102.macrion.core.common.quality.domain.QualityRepository
+import io.github.vibhor1102.macrion.core.domain.IRepository
 import io.github.vibhor1102.macrion.core.domain.model.scenario.Scenario
 import io.github.vibhor1102.macrion.core.dumb.domain.model.DumbScenario
 import io.github.vibhor1102.macrion.core.common.permissions.PermissionsController
@@ -41,7 +42,10 @@ import io.github.vibhor1102.macrion.feature.revenue.IRevenueRepository
 import io.github.vibhor1102.macrion.feature.revenue.UserConsentState
 
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -55,6 +59,7 @@ class ScenarioViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val appComponentsProvider: AppComponentsProvider,
     private val serviceConnection: LocalAccessibilityServiceConnection,
+    private val smartRepository: IRepository,
 ) : ViewModel() {
 
     val userConsentState: StateFlow<UserConsentState> = revenueRepository.userConsentState
@@ -116,6 +121,16 @@ class ScenarioViewModel @Inject constructor(
         }
 
         return serviceConnection.getLocalService()?.launchSmartScenario(resultCode, data, scenario) == true
+    }
+
+    /** Tells, on the main thread, if the scenario has screen events, i.e. if it needs the screen capture. */
+    fun needsScreenCapture(scenario: Scenario, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val needed = withContext(Dispatchers.IO) {
+                runCatching { smartRepository.getScreenEvents(scenario.id.databaseId).isNotEmpty() }.getOrDefault(true)
+            }
+            onResult(needed)
+        }
     }
 
     fun loadDumbScenario(context: Context, scenario: DumbScenario): Boolean {

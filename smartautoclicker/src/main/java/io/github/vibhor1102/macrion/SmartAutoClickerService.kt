@@ -204,7 +204,17 @@ class SmartAutoClickerService : AccessibilityService() {
         qualityMetricsMonitor.onServiceForegroundStart()
 
         serviceNotification?.let {
-            startForegroundMediaProjectionServiceCompat(NotificationIds.FOREGROUND_SERVICE_NOTIFICATION_ID, it)
+            try {
+                startForegroundMediaProjectionServiceCompat(NotificationIds.FOREGROUND_SERVICE_NOTIFICATION_ID, it)
+            } catch (ex: RuntimeException) {
+                // Android 14+ refuses a media projection foreground service when the scenario runs without screen
+                // capture (no consent given). The accessibility service doesn't need it: only show the notification.
+                Log.w(TAG, "Can't start as media projection foreground service, showing the notification only", ex)
+                try {
+                    getSystemService(android.app.NotificationManager::class.java)
+                        ?.notify(NotificationIds.FOREGROUND_SERVICE_NOTIFICATION_ID, it)
+                } catch (_: SecurityException) { }
+            }
         }
         requestFilterKeyEvents(true)
 

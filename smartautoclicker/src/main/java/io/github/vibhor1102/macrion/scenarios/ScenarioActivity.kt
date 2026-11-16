@@ -17,6 +17,7 @@
  */
 package io.github.vibhor1102.macrion.scenarios
 
+import io.github.vibhor1102.macrion.core.base.capture.ScreenCaptureContract
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -187,13 +188,18 @@ class ScenarioActivity : ComponentActivity() {
         ) {
             when (val scenario = requestedItem?.scenario) {
                 is DumbScenario -> launchDumbScenario(scenario)
-                is Scenario -> mediaProjectionRequest.showMediaProjectionWarning(
-                    context = this,
-                    forceEntireScreen = scenarioViewModel.isEntireScreenCaptureForced(),
-                    onSuccess = { resultCode, data -> launchSmartScenario(resultCode, data, scenario) },
-                    onFailure = { showProjectionDeniedToast() },
-                    onError = { showUnsupportedDeviceDialog() },
-                )
+                is Scenario -> scenarioViewModel.needsScreenCapture(scenario) { needsCapture ->
+                    // Scenarios without screen events (recorded taps, element taps...) don't need the screen
+                    // content: start them without the system "share your screen" dialog.
+                    if (!needsCapture) launchSmartScenario(ScreenCaptureContract.RESULT_CODE_NO_SCREEN_CAPTURE, Intent(), scenario)
+                    else mediaProjectionRequest.showMediaProjectionWarning(
+                        context = this,
+                        forceEntireScreen = scenarioViewModel.isEntireScreenCaptureForced(),
+                        onSuccess = { resultCode, data -> launchSmartScenario(resultCode, data, scenario) },
+                        onFailure = { showProjectionDeniedToast() },
+                        onError = { showUnsupportedDeviceDialog() },
+                    )
+                }
             }
         }
     }

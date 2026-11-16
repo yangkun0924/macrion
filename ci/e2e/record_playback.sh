@@ -128,7 +128,13 @@ adb shell input keyevent KEYCODE_HOME; sleep 2
 
 log "play scenario $ID (same entry point as the home screen shortcut)"
 adb shell am start -n "$PKG/$LAUNCHER_ACTIVITY" --el "$EXTRA_ID" "$ID" | tee -a "$RESULT"
-sleep 20
+sleep 4
+dump "playback_start"
+if python3 "$HERE/ui.py" has "$LAST" "(share your screen|start recording or casting|screen capture|화면.*공유|start now)"; then
+  fail "the 'share your screen' dialog showed up, playback must start directly"
+fi
+log "no screen sharing dialog"
+sleep 16
 dump "playback_end_screen"
 TOP=$(top_package)
 log "app on screen after playback: $TOP"
