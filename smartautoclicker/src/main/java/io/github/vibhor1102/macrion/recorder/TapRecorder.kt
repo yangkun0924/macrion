@@ -8,7 +8,10 @@ import android.content.Context
 import android.content.Intent as AndroidIntent
 import android.graphics.Point
 import android.graphics.Rect
+import android.provider.Settings
 import android.util.Log
+import android.view.accessibility.AccessibilityWindowInfo
+import android.view.inputmethod.InputMethodManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
@@ -56,6 +59,7 @@ object TapRecorder {
     private var serviceRef: WeakReference<AccessibilityService>? = null
     private var repository: IRepository? = null
     private var originalEventTypes: Int = 0
+    private var originalFlags: Int = 0
 
     private var ignoredPackages: Set<String> = emptySet()
     private var startPackage: String? = null
@@ -85,13 +89,16 @@ object TapRecorder {
         startPackage = null
         ignoredPackages = buildSet {
             add(context.packageName)
-            add("com.android.systemui")
+            addAll(SYSTEM_OVERLAY_PACKAGES)
             getHomePackages(context).forEach(::add)
+            getInputMethodPackages(context).forEach(::add)
+            getAutofillPackage(context)?.let(::add)
         }
 
         // Some devices return a null service info, start from a fresh one then.
         val info = service.serviceInfo ?: AccessibilityServiceInfo()
         originalEventTypes = info.eventTypes
+        originalFlags = info.flags
         info.eventTypes = info.eventTypes or RECORDED_EVENT_TYPES
         info.flags = info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
             AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
@@ -105,20 +112,24 @@ object TapRecorder {
     fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (!_isRecording.value || event == null) return
         val pkg = event.packageName?.toString() ?: return
-        if (pkg in ignoredPackages) return
+        if (pkg in ignoredPackages || pkg.isSystemOverlayPackage()) return
 
-        when (event.eventType) {
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ->
-                if (startPackage == null && steps.isEmpty()) startPackage = pkg
+        // The app to launch is the one of the first real tap made in a regular app window. Window changes are not used
+        // for it: on some devices (Samsung Pass, autofill, keyboards, edge panels...) a system window shows up first.
+        if (event.eventType != AccessibilityEvent.TYPE_VIEW_CLICKED) return
+        if (!event.isInApplicationWindow()) return
 
-            AccessibilityEvent.TYPE_VIEW_CLICKED -> {
-                if (startPackage == null) startPackage = pkg
-                val step = event.toStep() ?: return
-                steps.add(step)
-                _stepCount.value = steps.size
-                Log.d(TAG, "Recorded $step")
-            }
-        }
+        if (startPackage == null) startPackage = pkg
+        val step = event.toStep() ?: return
+        steps.add(step)
+        _stepCount.value = steps.size
+        Log.d(TAG, "Recorded $step in $pkg")
+    }
+
+    private fun AccessibilityEvent.isInApplicationWindow(): Boolean {
+        val windows = serviceRef?.get()?.windows ?: return true
+        val window = windows.firstOrNull { it.id == windowId } ?: return true
+        return window.type == AccessibilityWindowInfo.TYPE_APPLICATION
     }
 
     /** Stop recording without saving. */
@@ -255,6 +266,7 @@ object TapRecorder {
         // Only remove the event types added for the recording: other flags may have changed meanwhile.
         service.serviceInfo?.let { info ->
             info.eventTypes = originalEventTypes and RECORDED_EVENT_TYPES.inv()
+            info.flags = originalFlags
             service.serviceInfo = info
         }
     }
@@ -264,11 +276,41 @@ object TapRecorder {
             .queryIntentActivities(AndroidIntent(AndroidIntent.ACTION_MAIN).addCategory(AndroidIntent.CATEGORY_HOME), 0)
             .mapNotNull { it.activityInfo?.packageName }
 
+    private fun getInputMethodPackages(context: Context): List<String> =
+        try {
+            context.getSystemService(InputMethodManager::class.java)?.inputMethodList?.map { it.packageName }.orEmpty()
+        } catch (ex: Exception) {
+            emptyList()
+        }
+
+    private fun getAutofillPackage(context: Context): String? =
+        Settings.Secure.getString(context.contentResolver, "autofill_service")
+            ?.let(ComponentName::unflattenFromString)?.packageName
+
+    private fun String.isSystemOverlayPackage(): Boolean =
+        SYSTEM_OVERLAY_PREFIXES.any { startsWith(it) }
+
     private fun launchComponent(context: Context, pkg: String): ComponentName? =
         context.packageManager.getLaunchIntentForPackage(pkg)?.component
 }
 
 private const val TAG = "TapRecorder"
+
+/** Packages showing system windows over other apps, never the app the user wants to automate. */
+private val SYSTEM_OVERLAY_PACKAGES = setOf(
+    "android",
+    "com.android.systemui",
+    "com.google.android.gms",
+    "com.samsung.android.samsungpass",
+    "com.samsung.android.samsungpassautofill",
+    "com.samsung.android.authfw",
+    "com.samsung.android.biometrics.app.setting",
+    "com.samsung.android.app.cocktailbarservice",
+    "com.samsung.android.honeyboard",
+    "com.samsung.android.bixby.agent",
+    "com.samsung.android.app.smartcapture",
+)
+private val SYSTEM_OVERLAY_PREFIXES = listOf("com.samsung.android.samsungpass", "com.samsung.android.biometrics")
 private const val RECORDED_EVENT_TYPES = AccessibilityEvent.TYPE_VIEW_CLICKED or AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
 private const val TEXT_MAX_LENGTH = 40
 private const val NAME_MAX_LENGTH = 50
