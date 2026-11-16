@@ -21,6 +21,7 @@ import android.content.Context
 import androidx.annotation.DrawableRes
 import io.github.vibhor1102.macrion.core.domain.model.action.Action
 import io.github.vibhor1102.macrion.core.domain.model.action.CaptureScreenshot
+import io.github.vibhor1102.macrion.core.domain.model.action.TapElement
 import io.github.vibhor1102.macrion.core.domain.model.action.ChangeCounter
 import io.github.vibhor1102.macrion.core.domain.model.action.Click
 import io.github.vibhor1102.macrion.core.domain.model.action.ExternalAction
@@ -29,6 +30,7 @@ import io.github.vibhor1102.macrion.core.domain.model.action.Notification
 import io.github.vibhor1102.macrion.core.domain.model.action.Pause
 import io.github.vibhor1102.macrion.core.domain.model.action.PlaySound
 import io.github.vibhor1102.macrion.core.domain.model.action.SetText
+import io.github.vibhor1102.macrion.core.domain.model.action.TapElement
 import io.github.vibhor1102.macrion.core.domain.model.action.SplitAction
 import io.github.vibhor1102.macrion.core.domain.model.action.Swipe
 import io.github.vibhor1102.macrion.core.domain.model.action.SystemAction
@@ -73,6 +75,7 @@ internal fun Action.getIconRes(): Int = when (this) {
     is Notification -> getNotificationIconRes()
     is SystemAction -> getSystemActionIconRes()
     is SetText -> getSetTextIconRes()
+    is TapElement -> getTapElementIconRes()
     is PlaySound -> getPlaySoundIconRes()
     is CaptureScreenshot -> getCaptureScreenshotIconRes()
 }
@@ -89,6 +92,7 @@ internal fun Action.getActionDescription(context: Context, parent: Event?, inErr
     is Notification -> getDescription(context, inError)
     is SystemAction -> getDescription(context, inError)
     is SetText -> getDescription(context, inError)
+    is TapElement -> getDescription(context, inError)
     is PlaySound -> getDescription(context, inError)
     is CaptureScreenshot -> getDescription(context, inError)
 }

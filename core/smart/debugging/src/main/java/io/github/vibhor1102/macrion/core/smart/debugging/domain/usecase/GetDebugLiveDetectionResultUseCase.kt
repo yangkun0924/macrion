@@ -25,6 +25,7 @@ import io.github.vibhor1102.macrion.core.domain.model.action.Notification
 import io.github.vibhor1102.macrion.core.domain.model.action.Pause
 import io.github.vibhor1102.macrion.core.domain.model.action.PlaySound
 import io.github.vibhor1102.macrion.core.domain.model.action.CaptureScreenshot
+import io.github.vibhor1102.macrion.core.domain.model.action.TapElement
 import io.github.vibhor1102.macrion.core.domain.model.action.SetText
 import io.github.vibhor1102.macrion.core.domain.model.action.Swipe
 import io.github.vibhor1102.macrion.core.domain.model.action.SystemAction
@@ -94,6 +95,7 @@ class GetDebugLiveDetectionResultUseCase @Inject constructor(
                     }
                 } ?: 0L
                 is CaptureScreenshot,
+                is TapElement,
                 is ChangeCounter,
                 is ExternalAction,
                 is Intent,

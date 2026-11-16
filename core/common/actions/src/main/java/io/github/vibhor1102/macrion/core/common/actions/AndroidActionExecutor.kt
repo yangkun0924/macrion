@@ -21,6 +21,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.content.Intent
 import io.github.vibhor1102.macrion.core.base.Dumpable
+import io.github.vibhor1102.macrion.core.common.actions.element.ElementSelectorKind
 import io.github.vibhor1102.macrion.core.common.actions.model.ActionNotificationRequest
 
 interface AndroidActionExecutor: Dumpable {
@@ -83,6 +84,15 @@ interface AndroidActionExecutor: Dumpable {
      * cursor at the end of text.
      */
     fun writeTextOnFocusedItem(text: String, validate: Boolean)
+
+    /**
+     * Wait for a UI element matching the selector to be displayed, then tap it.
+     *
+     * The element is clicked through accessibility when possible, or tapped at its center otherwise.
+     *
+     * @return true if the element was tapped, false if it was not found before the timeout.
+     */
+    suspend fun tapElement(kind: ElementSelectorKind, value: String, timeoutMs: Long): Boolean
 
     /**
      * Launch a new activity.

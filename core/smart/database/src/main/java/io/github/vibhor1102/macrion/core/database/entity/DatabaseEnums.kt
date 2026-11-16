@@ -62,6 +62,22 @@ enum class ActionType {
     CAPTURE_SCREENSHOT,
     /** Execute multiple sub-actions simultaneously (e.g. dual-swipe zoom). */
     SPLIT_ACTION,
+    /** Tap a UI element found through accessibility, by its text, resource id or content description. */
+    TAP_ELEMENT,
+}
+
+/**
+ * How a [ActionType.TAP_ELEMENT] action finds the element to tap.
+ */
+enum class ElementSelectorType {
+    /** The element text is exactly the selector value (case insensitive, trimmed). */
+    TEXT_EXACT,
+    /** The element text contains the selector value (case insensitive). */
+    TEXT_CONTAINS,
+    /** The element view id resource name matches the selector value (full "pkg:id/name" or just "name"). */
+    RESOURCE_ID,
+    /** The element content description contains the selector value (case insensitive). */
+    CONTENT_DESCRIPTION,
 }
 
 

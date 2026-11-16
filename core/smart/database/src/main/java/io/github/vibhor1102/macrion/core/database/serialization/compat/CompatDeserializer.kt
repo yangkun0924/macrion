@@ -43,6 +43,7 @@ import io.github.vibhor1102.macrion.core.database.entity.ConditionType
 import io.github.vibhor1102.macrion.core.database.entity.CounterComparisonOperation
 import io.github.vibhor1102.macrion.core.database.entity.CounterOperationValueType
 import io.github.vibhor1102.macrion.core.database.entity.CountersEntity
+import io.github.vibhor1102.macrion.core.database.entity.ElementSelectorType
 import io.github.vibhor1102.macrion.core.database.entity.EventEntity
 import io.github.vibhor1102.macrion.core.database.entity.EventToggleEntity
 import io.github.vibhor1102.macrion.core.database.entity.EventToggleType
@@ -494,6 +495,7 @@ internal open class CompatDeserializer : Deserializer {
             ActionType.PLAY_SOUND -> deserializeActionPlaySound(jsonAction)
             ActionType.CAPTURE_SCREENSHOT -> deserializeActionCaptureScreenshot(jsonAction)
             ActionType.SPLIT_ACTION -> deserializeActionSplit(jsonAction)
+            ActionType.TAP_ELEMENT -> deserializeActionTapElement(jsonAction)
             null -> null
         }
 
@@ -722,6 +724,23 @@ internal open class CompatDeserializer : Deserializer {
             type = ActionType.TEXT,
             textValue = jsonSetText.getString("textValue") ?: "",
             textValidateInput = jsonSetText.getBoolean("textValidateInput") ?: false,
+        )
+    }
+
+    open fun deserializeActionTapElement(jsonTapElement: JsonObject): ActionEntity? {
+        val id = jsonTapElement.getLong("id", true) ?: return null
+        val eventId = jsonTapElement.getLong("eventId", true) ?: return null
+        val selectorType = jsonTapElement.getEnum<ElementSelectorType>("elementSelectorType") ?: return null
+
+        return ActionEntity(
+            id = id,
+            eventId = eventId,
+            name = jsonTapElement.getString("name") ?: "",
+            priority = jsonTapElement.getInt("priority")?.coerceAtLeast(0) ?: 0,
+            type = ActionType.TAP_ELEMENT,
+            elementSelectorType = selectorType,
+            elementSelectorValue = jsonTapElement.getString("elementSelectorValue") ?: "",
+            elementTimeoutMs = jsonTapElement.getLong("elementTimeoutMs")?.coerceIn(0L, 60_000L) ?: 5_000L,
         )
     }
 

@@ -30,6 +30,8 @@ import io.github.vibhor1102.macrion.core.domain.model.action.Intent
 import io.github.vibhor1102.macrion.core.domain.model.action.Notification
 import io.github.vibhor1102.macrion.core.domain.model.action.Pause
 import io.github.vibhor1102.macrion.core.domain.model.action.SetText
+import io.github.vibhor1102.macrion.core.domain.model.action.TapElement
+import io.github.vibhor1102.macrion.core.database.entity.ElementSelectorType
 import io.github.vibhor1102.macrion.core.domain.model.action.Swipe
 import io.github.vibhor1102.macrion.core.domain.model.action.SystemAction
 import io.github.vibhor1102.macrion.core.domain.model.action.ToggleEvent
@@ -57,6 +59,7 @@ internal fun Action.toEntity(): ActionEntity {
         is PlaySound -> toPlaySoundEntity()
         is CaptureScreenshot -> toCaptureScreenshotEntity()
         is SplitAction -> toSplitActionEntity()
+        is TapElement -> toTapElementEntity()
     }
 }
 
@@ -195,6 +198,23 @@ private fun SetText.toSetTextEntity(): ActionEntity =
         type = ActionType.TEXT,
         textValue = text,
         textValidateInput = validateInput,
+    )
+
+private fun TapElement.toTapElementEntity(): ActionEntity =
+    ActionEntity(
+        id = id.databaseId,
+        eventId = eventId.databaseId,
+        priority = priority,
+        name = name!!.trim(),
+        type = ActionType.TAP_ELEMENT,
+        elementSelectorType = when (selectorType) {
+            TapElement.SelectorType.TEXT_EXACT -> ElementSelectorType.TEXT_EXACT
+            TapElement.SelectorType.TEXT_CONTAINS -> ElementSelectorType.TEXT_CONTAINS
+            TapElement.SelectorType.RESOURCE_ID -> ElementSelectorType.RESOURCE_ID
+            TapElement.SelectorType.CONTENT_DESCRIPTION -> ElementSelectorType.CONTENT_DESCRIPTION
+        },
+        elementSelectorValue = selectorValue.trim(),
+        elementTimeoutMs = timeoutMs,
     )
 
 private fun PlaySound.toPlaySoundEntity(): ActionEntity =

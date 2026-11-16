@@ -32,6 +32,7 @@ import io.github.vibhor1102.macrion.feature.smart.config.ui.action.intent.flags.
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.notification.NotificationViewModel
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.pause.PauseViewModel
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.settext.SetTextViewModel
+import io.github.vibhor1102.macrion.feature.smart.config.ui.action.tapelement.TapElementViewModel
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.sound.PlaySoundViewModel
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.screenshot.CaptureScreenshotViewModel
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.swipe.SwipeViewModel
@@ -120,6 +121,7 @@ interface ScenarioConfigViewModelsEntryPoint {
     fun scenarioSwitchViewModel(): ScenarioSwitchViewModel
     fun screenConditionSelectionViewModel(): ScreenConditionSelectionViewModel
     fun setTextViewModel(): SetTextViewModel
+    fun tapElementViewModel(): TapElementViewModel
     fun smartActionsBriefViewModel(): SmartActionsBriefViewModel
     fun swipeViewModel(): SwipeViewModel
     fun splitActionViewModel(): io.github.vibhor1102.macrion.feature.smart.config.ui.action.split.SplitActionViewModel

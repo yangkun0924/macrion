@@ -25,6 +25,7 @@ import io.github.vibhor1102.macrion.feature.smart.config.ui.common.model.action.
 import io.github.vibhor1102.macrion.feature.smart.config.ui.common.model.action.getNotificationIconRes
 import io.github.vibhor1102.macrion.feature.smart.config.ui.common.model.action.getPauseIconRes
 import io.github.vibhor1102.macrion.feature.smart.config.ui.common.model.action.getSetTextIconRes
+import io.github.vibhor1102.macrion.feature.smart.config.ui.common.model.action.getTapElementIconRes
 import io.github.vibhor1102.macrion.feature.smart.config.ui.common.model.action.getSwipeIconRes
 import io.github.vibhor1102.macrion.feature.smart.config.ui.common.model.action.getSystemActionIconRes
 import io.github.vibhor1102.macrion.feature.smart.config.ui.common.model.action.getToggleEventIconRes
@@ -120,6 +121,13 @@ sealed class ActionTypeChoice(
         R.string.item_set_text_title,
         R.string.item_set_text_desc,
         getSetTextIconRes(),
+    )
+
+    /** Tap a UI element found by text, id or description. */
+    data object TapElement : ActionTypeChoice(
+        R.string.item_tap_element_title,
+        R.string.item_tap_element_desc,
+        getTapElementIconRes(),
     )
 
     /** Play sound Action choice. */

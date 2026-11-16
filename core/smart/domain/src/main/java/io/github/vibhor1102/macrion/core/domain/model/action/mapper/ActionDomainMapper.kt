@@ -27,6 +27,8 @@ import io.github.vibhor1102.macrion.core.domain.model.action.ExternalAction
 import io.github.vibhor1102.macrion.core.domain.model.action.PlaySound
 import io.github.vibhor1102.macrion.core.domain.model.action.CaptureScreenshot
 import io.github.vibhor1102.macrion.core.domain.model.action.SplitAction
+import io.github.vibhor1102.macrion.core.domain.model.action.TapElement
+import io.github.vibhor1102.macrion.core.database.entity.ElementSelectorType
 
 /** Convert an Action entity into a Domain Action. */
 internal fun CompleteActionEntity.toDomain(cleanIds: Boolean = false): Action = when (action.type) {
@@ -43,6 +45,7 @@ internal fun CompleteActionEntity.toDomain(cleanIds: Boolean = false): Action = 
     ActionType.PLAY_SOUND -> toDomainPlaySound(cleanIds)
     ActionType.CAPTURE_SCREENSHOT -> toDomainCaptureScreenshot(cleanIds)
     ActionType.SPLIT_ACTION -> toDomainSplitAction(cleanIds)
+    ActionType.TAP_ELEMENT -> toDomainTapElement(cleanIds)
 }
 
 private fun CompleteActionEntity.toDomainClick(cleanIds: Boolean = false) = Click(
@@ -156,6 +159,21 @@ private fun CompleteActionEntity.toDomainSetText(cleanIds: Boolean = false) = Se
     priority = action.priority,
     text = action.textValue ?: "",
     validateInput = action.textValidateInput ?: false,
+)
+
+private fun CompleteActionEntity.toDomainTapElement(cleanIds: Boolean = false) = TapElement(
+    id = Identifier(id = action.id, asTemporary = cleanIds),
+    eventId = Identifier(id = action.eventId, asTemporary = cleanIds),
+    name = action.name,
+    priority = action.priority,
+    selectorType = when (action.elementSelectorType ?: ElementSelectorType.TEXT_EXACT) {
+        ElementSelectorType.TEXT_EXACT -> TapElement.SelectorType.TEXT_EXACT
+        ElementSelectorType.TEXT_CONTAINS -> TapElement.SelectorType.TEXT_CONTAINS
+        ElementSelectorType.RESOURCE_ID -> TapElement.SelectorType.RESOURCE_ID
+        ElementSelectorType.CONTENT_DESCRIPTION -> TapElement.SelectorType.CONTENT_DESCRIPTION
+    },
+    selectorValue = action.elementSelectorValue ?: "",
+    timeoutMs = action.elementTimeoutMs ?: TapElement.DEFAULT_TIMEOUT_MS,
 )
 
 private fun CompleteActionEntity.toDomainPlaySound(cleanIds: Boolean = false) = PlaySound(

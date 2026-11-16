@@ -737,4 +737,21 @@
     <string name="coordinate_right">Right</string>
     <string name="coordinate_top">Top</string>
     <string name="coordinate_bottom">Bottom</string>
+
+    <!-- Tap element action -->
+    <string name="item_tap_element_title">Tap element</string>
+    <string name="item_tap_element_desc">Find a button or view by its text, id or description and tap it, waiting until it appears</string>
+    <string name="item_tap_element_details">%1$s: %2$s</string>
+    <string name="dialog_title_tap_element_action">Tap element</string>
+    <string name="field_tap_element_selector_type">Find element by</string>
+    <string name="item_tap_element_selector_text_exact">Text</string>
+    <string name="item_tap_element_selector_text_contains">Text contains</string>
+    <string name="item_tap_element_selector_resource_id">Resource id</string>
+    <string name="item_tap_element_selector_content_desc">Description</string>
+    <string name="field_tap_element_value_text">Text to look for</string>
+    <string name="field_tap_element_value_resource_id">Resource id (e.g. btn_order or com.app:id/btn_order)</string>
+    <string name="field_tap_element_value_content_desc">Content description to look for</string>
+    <string name="field_tap_element_timeout">Wait up to (seconds)</string>
+    <string name="field_tap_element_timeout_desc">From 0 to 60 seconds. If the element does not appear, the next actions of this event are skipped.</string>
+    <string name="message_tap_element_help">The element is searched in the app currently on screen using accessibility, so it keeps working when the layout or screen size changes. Use the screen inspector to find texts and resource ids.</string>
 </resources>

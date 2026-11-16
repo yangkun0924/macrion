@@ -47,7 +47,7 @@ internal val backupScreenConditionTypes = setOf(ConditionType.ON_IMAGE_DETECTED,
 
 /** Evaluate only fields used by this action, never stale metadata from another action type. */
 internal fun ActionEntity.isUnsupportedByLegacyKlickr(): Boolean =
-    type in setOf(ActionType.EXTERNAL_ACTION, ActionType.PLAY_SOUND, ActionType.CAPTURE_SCREENSHOT, ActionType.SPLIT_ACTION) ||
+    type in setOf(ActionType.EXTERNAL_ACTION, ActionType.PLAY_SOUND, ActionType.CAPTURE_SCREENSHOT, ActionType.SPLIT_ACTION, ActionType.TAP_ELEMENT) ||
         positionCounterNames().isNotEmpty() ||
         (type == ActionType.CHANGE_COUNTER && counterOperationValueType == CounterOperationValueType.CONDITION) ||
         (type == ActionType.SWIPE && swipePath?.isCurved == true)

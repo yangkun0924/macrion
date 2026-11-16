@@ -29,6 +29,11 @@ import io.github.vibhor1102.macrion.core.common.actions.gesture.GestureDispatchR
 import io.github.vibhor1102.macrion.core.common.actions.model.ActionNotificationRequest
 import io.github.vibhor1102.macrion.core.common.actions.notification.NotificationRequestExecutor
 import io.github.vibhor1102.macrion.core.common.actions.text.TextExecutor
+import io.github.vibhor1102.macrion.core.common.actions.element.ElementLookup
+import io.github.vibhor1102.macrion.core.common.actions.element.ElementSelectorKind
+import io.github.vibhor1102.macrion.core.common.actions.element.ElementTapExecutor
+import android.graphics.Path
+import kotlinx.coroutines.delay
 import io.github.vibhor1102.macrion.core.common.actions.external.ExternalActionEventContract
 
 import kotlinx.coroutines.CancellationException
@@ -50,6 +55,7 @@ internal class AndroidActionExecutorImpl @Inject constructor(
     private val gestureExecutor: GestureExecutor,
     private val notificationRequestExecutor: NotificationRequestExecutor,
     private val textExecutor: TextExecutor,
+    private val elementTapExecutor: ElementTapExecutor,
     private val soundExecutor: SoundExecutor,
     private val screenshotExecutor: ScreenshotExecutor,
 ) : AndroidActionExecutor {
@@ -119,6 +125,37 @@ internal class AndroidActionExecutorImpl @Inject constructor(
         textExecutor.writeText(service, text, validate)
     }
 
+    override suspend fun tapElement(kind: ElementSelectorKind, value: String, timeoutMs: Long): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutMs.coerceAtLeast(0L)
+        while (true) {
+            currentCoroutineContext().ensureActive()
+            val service = accessibilityService ?: return false
+            val lookup = withContext(Dispatchers.Main.immediate) {
+                elementTapExecutor.findAndClick(service, kind, value)
+            }
+
+            when (lookup) {
+                ElementLookup.Clicked -> return true
+                is ElementLookup.TapAt -> {
+                    val path = Path().apply { moveTo(lookup.x, lookup.y) }
+                    dispatchGesture(
+                        GestureDescription.Builder()
+                            .addStroke(GestureDescription.StrokeDescription(path, 0L, ELEMENT_TAP_DURATION_MS))
+                            .build()
+                    )
+                    return true
+                }
+                ElementLookup.NotFound -> Unit
+            }
+
+            if (System.currentTimeMillis() >= deadline) {
+                Log.i(TAG, "Element not found before timeout: $kind '$value'")
+                return false
+            }
+            delay(ELEMENT_POLL_INTERVAL_MS)
+        }
+    }
+
     override fun startActivity(intent: Intent) {
         val service = accessibilityService ?: return
 
@@ -176,3 +213,6 @@ internal class AndroidActionExecutorImpl @Inject constructor(
 }
 
 private const val TAG = "ServiceActionExecutor"
+
+private const val ELEMENT_POLL_INTERVAL_MS = 250L
+private const val ELEMENT_TAP_DURATION_MS = 50L

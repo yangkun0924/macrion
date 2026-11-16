@@ -49,6 +49,8 @@ import io.github.vibhor1102.macrion.core.domain.model.action.ToggleEvent
 import io.github.vibhor1102.macrion.core.domain.model.action.ChangeCounter
 import io.github.vibhor1102.macrion.core.domain.model.action.Notification
 import io.github.vibhor1102.macrion.core.domain.model.action.SetText
+import io.github.vibhor1102.macrion.core.domain.model.action.TapElement
+import io.github.vibhor1102.macrion.core.common.actions.element.ElementSelectorKind
 import io.github.vibhor1102.macrion.core.domain.model.action.SystemAction
 import io.github.vibhor1102.macrion.core.domain.model.action.intent.putDomainExtra
 import io.github.vibhor1102.macrion.core.domain.model.event.Event
@@ -57,6 +59,7 @@ import io.github.vibhor1102.macrion.core.processing.data.processor.state.Process
 import io.github.vibhor1102.macrion.core.domain.model.action.ExternalAction
 import io.github.vibhor1102.macrion.core.domain.model.action.PlaySound
 import io.github.vibhor1102.macrion.core.domain.model.action.CaptureScreenshot
+import io.github.vibhor1102.macrion.core.domain.model.action.TapElement
 import io.github.vibhor1102.macrion.core.domain.model.action.SplitAction
 
 import kotlinx.coroutines.Dispatchers
@@ -116,6 +119,7 @@ internal class ActionExecutor(
                 is PlaySound -> CrashDiagnostics.Event.PLAY_SOUND
                 is CaptureScreenshot -> CrashDiagnostics.Event.CAPTURE_SCREENSHOT
                 is SplitAction -> CrashDiagnostics.Event.SPLIT_ACTION
+                is TapElement -> CrashDiagnostics.Event.TAP_ELEMENT
             })
             try {
                 when (action) {
@@ -131,6 +135,10 @@ internal class ActionExecutor(
                     is SetText -> executeSetText(action)
                     is PlaySound -> executePlaySound(action)
                     is SplitAction -> executeSplitAction(event, action, results)
+                    is TapElement -> {
+                        // The next actions usually depend on this tap (e.g. a screen flow): skip them if it failed.
+                        if (!executeTapElement(action)) return true
+                    }
                     is CaptureScreenshot -> {
                         val allowed = executeCaptureScreenshot(action)
                         if (!allowed) {
@@ -428,6 +436,18 @@ internal class ActionExecutor(
             )
         }
     }
+
+    private suspend fun executeTapElement(action: TapElement): Boolean =
+        androidExecutor.tapElement(
+            kind = when (action.selectorType) {
+                TapElement.SelectorType.TEXT_EXACT -> ElementSelectorKind.TEXT_EXACT
+                TapElement.SelectorType.TEXT_CONTAINS -> ElementSelectorKind.TEXT_CONTAINS
+                TapElement.SelectorType.RESOURCE_ID -> ElementSelectorKind.RESOURCE_ID
+                TapElement.SelectorType.CONTENT_DESCRIPTION -> ElementSelectorKind.CONTENT_DESCRIPTION
+            },
+            value = action.selectorValue,
+            timeoutMs = action.timeoutMs,
+        )
 
     private suspend fun executePlaySound(action: PlaySound) {
         val soundUri = action.soundUri ?: return

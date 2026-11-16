@@ -190,6 +190,7 @@ class SmartActionsBriefViewModel @Inject constructor(
         canCopyActions.map { canCopy ->
             buildList {
                 if (canCopy) add(ActionTypeChoice.Copy)
+                add(ActionTypeChoice.TapElement)
                 add(ActionTypeChoice.Click)
                 add(ActionTypeChoice.Swipe)
                 add(ActionTypeChoice.Zoom)
@@ -257,6 +258,7 @@ class SmartActionsBriefViewModel @Inject constructor(
         ActionTypeChoice.Notification -> editionRepository.editedItemsBuilder.createNewNotification(context)
         ActionTypeChoice.System -> editionRepository.editedItemsBuilder.createNewSystemAction(context)
         ActionTypeChoice.SetText -> editionRepository.editedItemsBuilder.createNewSetText(context)
+        ActionTypeChoice.TapElement -> editionRepository.editedItemsBuilder.createNewTapElement(context)
         ActionTypeChoice.PlaySound -> editionRepository.editedItemsBuilder.createNewPlaySound(context)
         ActionTypeChoice.CaptureScreenshot -> editionRepository.editedItemsBuilder.createNewCaptureScreenshot(context)
         ActionTypeChoice.Copy -> throw IllegalArgumentException("Unsupported action type for creation $choice")

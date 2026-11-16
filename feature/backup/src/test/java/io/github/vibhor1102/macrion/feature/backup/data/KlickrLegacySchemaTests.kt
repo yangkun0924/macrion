@@ -65,6 +65,7 @@ class KlickrLegacySchemaTests {
             "swipePath", "externalActionName", "soundUri", "soundTitle", "screenshotFolderUri", "screenshotFolderName",
             "waitBeforeMs", "waitAfterMs", "positionCounters", "fromCounters", "toCounters",
             "counterOperationConditionId", "counterOperationConditionPositionType",
+            "elementSelectorType", "elementSelectorValue", "elementTimeoutMs",
         ))
         contract(ConditionEntity.serializer().descriptor, LegacyCondition.serializer().descriptor, setOf("computeRate"))
         contract(EventEntity.serializer().descriptor, LegacyEvent.serializer().descriptor, setOf("folderName"))
@@ -79,7 +80,7 @@ class KlickrLegacySchemaTests {
 
     @Test fun newEnumValuesRequireAnExplicitCompatibilityDecision() {
         assertEquals(io.github.vibhor1102.macrion.feature.backup.data.klickr400.ActionType.entries.map { it.name }.toSet() +
-            setOf("EXTERNAL_ACTION", "PLAY_SOUND", "CAPTURE_SCREENSHOT", "SPLIT_ACTION"), ActionType.entries.map { it.name }.toSet())
+            setOf("EXTERNAL_ACTION", "PLAY_SOUND", "CAPTURE_SCREENSHOT", "SPLIT_ACTION", "TAP_ELEMENT"), ActionType.entries.map { it.name }.toSet())
         assertEquals(io.github.vibhor1102.macrion.feature.backup.data.klickr400.CounterOperationValueType.entries.map { it.name }.toSet() +
             "CONDITION", CounterOperationValueType.entries.map { it.name }.toSet())
         assertEquals(io.github.vibhor1102.macrion.feature.backup.data.klickr400.ConditionType.entries.map { it.name }, ConditionType.entries.map { it.name })

@@ -28,6 +28,7 @@ import io.github.vibhor1102.macrion.core.domain.model.action.Notification
 import io.github.vibhor1102.macrion.core.domain.model.action.Pause
 import io.github.vibhor1102.macrion.core.domain.model.action.PlaySound
 import io.github.vibhor1102.macrion.core.domain.model.action.CaptureScreenshot
+import io.github.vibhor1102.macrion.core.domain.model.action.TapElement
 import io.github.vibhor1102.macrion.core.domain.model.action.SetText
 import io.github.vibhor1102.macrion.core.domain.model.action.Swipe
 import io.github.vibhor1102.macrion.core.domain.model.action.SystemAction
@@ -41,6 +42,7 @@ import io.github.vibhor1102.macrion.feature.smart.config.ui.action.pause.PauseDi
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.selection.ActionTypeChoice
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.selection.ActionTypeSelectionDialog
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.settext.SetTextDialog
+import io.github.vibhor1102.macrion.feature.smart.config.ui.action.tapelement.TapElementDialog
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.sound.PlaySoundDialog
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.screenshot.CaptureScreenshotDialog
 import io.github.vibhor1102.macrion.feature.smart.config.ui.action.swipe.SwipeDialog
@@ -132,6 +134,7 @@ internal fun BaseOverlay.showSubActionConfigDialog(
         is ChangeCounter -> ChangeCounterDialog(actionConfigDialogListener)
         is ExternalAction -> ExternalActionDialog(actionConfigDialogListener)
         is SetText -> SetTextDialog(actionConfigDialogListener)
+        is TapElement -> TapElementDialog(actionConfigDialogListener)
         is PlaySound -> PlaySoundDialog(actionConfigDialogListener)
         is CaptureScreenshot -> CaptureScreenshotDialog(actionConfigDialogListener)
         is Notification -> {
@@ -194,6 +197,7 @@ internal fun BaseOverlay.showActionConfigDialog(
         is ChangeCounter -> ChangeCounterDialog(actionConfigDialogListener)
         is ExternalAction -> ExternalActionDialog(actionConfigDialogListener)
         is SetText -> SetTextDialog(actionConfigDialogListener)
+        is TapElement -> TapElementDialog(actionConfigDialogListener)
         is PlaySound -> PlaySoundDialog(actionConfigDialogListener)
         is CaptureScreenshot -> CaptureScreenshotDialog(actionConfigDialogListener)
         is Notification -> {

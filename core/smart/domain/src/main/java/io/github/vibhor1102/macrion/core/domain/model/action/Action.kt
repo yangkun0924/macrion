@@ -58,5 +58,6 @@ sealed class Action : Identifiable, Completable, Prioritizable {
             is PlaySound -> copy(id = id, eventId = eventId, name = name, priority = priority)
             is CaptureScreenshot -> copy(id = id, eventId = eventId, name = name, priority = priority)
             is SplitAction -> copy(id = id, eventId = eventId, name = name, priority = priority)
+            is TapElement -> copy(id = id, eventId = eventId, name = name, priority = priority)
         }
 }

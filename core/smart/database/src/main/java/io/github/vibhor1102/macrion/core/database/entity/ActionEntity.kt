@@ -98,6 +98,9 @@ import kotlinx.serialization.Serializable
  * @param soundTitle [ActionType.PLAY_SOUND] only: the user-visible title of the sound.
  * @param screenshotFolderUri [ActionType.CAPTURE_SCREENSHOT] only: the optional custom folder URI for screenshots.
  * @param screenshotFolderName [ActionType.CAPTURE_SCREENSHOT] only: the user-visible display name of the custom folder.
+ * @param elementSelectorType [ActionType.TAP_ELEMENT] only: how the element to tap is found.
+ * @param elementSelectorValue [ActionType.TAP_ELEMENT] only: the text, id or description to look for.
+ * @param elementTimeoutMs [ActionType.TAP_ELEMENT] only: how long to wait for the element to appear.
  */
 @Entity(
     tableName = ACTION_TABLE,
@@ -185,6 +188,11 @@ data class ActionEntity(
     // ActionType.CAPTURE_SCREENSHOT
     @ColumnInfo(name = "screenshot_folder_uri") val screenshotFolderUri: String? = null,
     @ColumnInfo(name = "screenshot_folder_name") val screenshotFolderName: String? = null,
+
+    // ActionType.TAP_ELEMENT
+    @ColumnInfo(name = "element_selector_type") val elementSelectorType: ElementSelectorType? = null,
+    @ColumnInfo(name = "element_selector_value") val elementSelectorValue: String? = null,
+    @ColumnInfo(name = "element_timeout_ms") val elementTimeoutMs: Long? = null,
 
     // Delays (Optional)
     @ColumnInfo(name = "wait_before_ms") val waitBeforeMs: Long? = null,

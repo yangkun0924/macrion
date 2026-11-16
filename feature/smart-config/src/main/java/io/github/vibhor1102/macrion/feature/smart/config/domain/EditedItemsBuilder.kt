@@ -43,7 +43,9 @@ import io.github.vibhor1102.macrion.core.domain.model.action.Notification
 import io.github.vibhor1102.macrion.core.domain.model.action.Pause
 import io.github.vibhor1102.macrion.core.domain.model.action.PlaySound
 import io.github.vibhor1102.macrion.core.domain.model.action.CaptureScreenshot
+import io.github.vibhor1102.macrion.core.domain.model.action.TapElement
 import io.github.vibhor1102.macrion.core.domain.model.action.SetText
+import io.github.vibhor1102.macrion.core.domain.model.action.TapElement
 import io.github.vibhor1102.macrion.core.domain.model.action.Swipe
 import io.github.vibhor1102.macrion.core.domain.model.action.SystemAction
 import io.github.vibhor1102.macrion.core.domain.model.action.ToggleEvent
@@ -458,6 +460,14 @@ class EditedItemsBuilder internal constructor(
             priority = 0,
         )
 
+    fun createNewTapElement(context: Context): TapElement =
+        TapElement(
+            id = actionsIdCreator.generateNewIdentifier(),
+            eventId = getEditedEventIdOrThrow(),
+            name = defaultValues.tapElementName(context),
+            priority = 0,
+        )
+
     fun createNewPlaySound(context: Context): PlaySound =
         PlaySound(
             id = actionsIdCreator.generateNewIdentifier(),
@@ -489,6 +499,7 @@ class EditedItemsBuilder internal constructor(
         is Notification -> createNewNotificationFrom(from, eventId)
         is SystemAction -> createNewSystemActionFrom(from, eventId)
         is SetText -> createNewSetTextFrom(from, eventId)
+        is TapElement -> from.copy(id = actionsIdCreator.generateNewIdentifier(), eventId = eventId, name = "" + from.name)
         is PlaySound -> createNewPlaySoundFrom(from, eventId)
         is CaptureScreenshot -> createNewCaptureScreenshotFrom(from, eventId)
         is SplitAction -> createNewSplitActionFrom(from, eventId)
