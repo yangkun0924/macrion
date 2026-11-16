@@ -20,7 +20,14 @@ RESULT="$OUT/result.txt"
 : > "$RESULT"
 
 log() { echo "== $*" | tee -a "$RESULT"; }
-fail() { log "FAIL: $*"; dump "fail"; adb logcat -d > "$OUT/logcat.txt"; exit 1; }
+fail() {
+  log "FAIL: $*"; dump "fail"
+  adb logcat -d > "$OUT/logcat.txt"
+  echo "--- relevant logcat"
+  grep -E "TapRecorder|RecorderAction|ShortcutLauncher|SmartAutoClicker|LocalService|DetectorEngine|ScenarioProcessor|ElementTap|AndroidRuntime|FATAL|macrion" "$OUT/logcat.txt" \
+    | grep -v -E "StrictMode|chatty" | tail -150
+  exit 1
+}
 
 # Screenshot + UI dump, numbered so the artifact reads in order.
 dump() {
@@ -109,6 +116,8 @@ if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(add automatically|add|add to home
   adb shell input tap $pos; sleep 2; log "home screen shortcut accepted"
 fi
 
+echo "--- recorder logcat"
+adb logcat -d | grep -E "TapRecorder|RecorderAction|AndroidRuntime" | tail -40
 DB=$(adb shell ls /data/data/$PKG/databases/ | tr -d '\r' | grep -v -E "journal|wal|shm" | head -1)
 log "database: $DB"
 adb shell "sqlite3 /data/data/$PKG/databases/$DB '.tables'" | tee -a "$RESULT"
@@ -121,30 +130,45 @@ if ! [[ "$ID" =~ ^[0-9]+$ ]]; then
 fi
 log "saved scenario id $ID"
 
-# Fresh state before playback.
-adb shell am force-stop $TARGET
-[ -n "$DECOY" ] && adb shell am force-stop $DECOY
-adb shell input keyevent KEYCODE_HOME; sleep 2
+reset_apps() {
+  adb shell am force-stop $TARGET
+  [ -n "$DECOY" ] && adb shell am force-stop $DECOY
+  adb shell input keyevent KEYCODE_HOME; sleep 2
+}
 
-log "play scenario $ID (same entry point as the home screen shortcut)"
-adb shell am start -n "$PKG/$LAUNCHER_ACTIVITY" --el "$EXTRA_ID" "$ID" | tee -a "$RESULT"
-sleep 20
-dump "playback_end_screen"
-TOP=$(top_package)
-log "app on screen after playback: $TOP"
-adb logcat -d > "$OUT/logcat.txt"
-
-[ "$TOP" = "$TARGET" ] || fail "playback opened '$TOP' instead of '$TARGET'"
-
-SIMILARITY=$(python3 - "$EXPECTED" "$LAST" <<'EOF'
+# Check that a playback started directly (no screen sharing dialog) and ended on the recorded screen.
+check_playback() {
+  local label="$1"
+  sleep 4
+  dump "${label}_start"
+  if python3 "$HERE/ui.py" has "$LAST" "(share your screen|start recording or casting|screen capture|화면.*공유|start now)"; then
+    fail "[$label] the 'share your screen' dialog showed up, playback must start directly"
+  fi
+  log "[$label] no screen sharing dialog"
+  sleep 16
+  dump "${label}_end_screen"
+  TOP=$(top_package)
+  log "[$label] app on screen after playback: $TOP"
+  [ "$TOP" = "$TARGET" ] || fail "[$label] playback opened '$TOP' instead of '$TARGET'"
+  SIMILARITY=$(python3 - "$EXPECTED" "$LAST" <<'EOF2'
 import sys, xml.etree.ElementTree as ET
 def texts(p):
     return {n.get("text") for n in ET.parse(p).getroot().iter("node") if n.get("text")}
 a, b = texts(sys.argv[1]), texts(sys.argv[2])
 print(round(len(a & b) / max(1, len(a | b)), 2))
-EOF
+EOF2
 )
-log "end screen similarity with the recorded one: $SIMILARITY"
-python3 -c "import sys; sys.exit(0 if float('$SIMILARITY') >= 0.6 else 1)" || fail "playback did not end on the recorded screen"
+  log "[$label] end screen similarity with the recorded one: $SIMILARITY"
+  python3 -c "import sys; sys.exit(0 if float('$SIMILARITY') >= 0.6 else 1)" || fail "[$label] playback did not end on the recorded screen"
+  log "[$label] OK"
+}
+
+RECEIVER=io.github.vibhor1102.macrion.feature.externallaunch.schedule.ScheduleReceiver
+
+# 1. Home screen shortcut entry point.
+reset_apps
+log "play scenario $ID (same entry point as the home screen shortcut)"
+adb shell am start -n "$PKG/$LAUNCHER_ACTIVITY" --el "$EXTRA_ID" "$ID" | tee -a "$RESULT"
+check_playback "shortcut"
 
 log "PASS"
