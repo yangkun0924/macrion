@@ -16,18 +16,18 @@ object ScenarioShortcuts {
      * Ask the launcher to pin a shortcut starting the given smart scenario.
      * The user confirms the placement in the launcher dialog.
      */
-    fun requestPinSmartScenario(context: Context, scenarioId: Long, scenarioName: String) {
+    fun requestPinSmartScenario(context: Context, scenarioId: Long, scenarioName: String, isDumb: Boolean = false) {
         if (!ShortcutManagerCompat.isRequestPinShortcutSupported(context)) {
             Toast.makeText(context, R.string.toast_shortcut_not_supported, Toast.LENGTH_LONG).show()
             return
         }
 
         val label = scenarioName.ifBlank { context.getString(R.string.shortcut_default_label) }
-        val shortcut = ShortcutInfoCompat.Builder(context, "smart-scenario-$scenarioId")
+        val shortcut = ShortcutInfoCompat.Builder(context, if (isDumb) "dumb-scenario-$scenarioId" else "smart-scenario-$scenarioId")
             .setShortLabel(label.take(SHORT_LABEL_MAX_LENGTH))
             .setLongLabel(label)
             .setIcon(IconCompat.createWithResource(context, R.drawable.ic_shortcut_run_scenario))
-            .setIntent(ShortcutLauncherActivity.getLaunchIntent(context, scenarioId))
+            .setIntent(ShortcutLauncherActivity.getLaunchIntent(context, scenarioId, isDumb))
             .build()
 
         ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)

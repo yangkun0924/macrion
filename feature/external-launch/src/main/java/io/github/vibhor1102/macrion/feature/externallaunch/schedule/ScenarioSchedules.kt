@@ -34,6 +34,7 @@ data class ScenarioSchedule(
     val days: Int,
     val mode: ScheduleMode,
     val enabled: Boolean = true,
+    val isDumb: Boolean = false,
 ) {
     fun isOnDay(isoDayOfWeek: Int): Boolean = days and (1 shl (isoDayOfWeek - 1)) != 0
 
@@ -75,18 +76,21 @@ object ScenarioSchedules {
             emptyList()
         }
 
-    fun getForScenario(context: Context, scenarioId: Long): List<ScenarioSchedule> =
-        getAll(context).filter { it.scenarioId == scenarioId }
+    fun getForScenario(context: Context, scenarioId: Long, isDumb: Boolean = false): List<ScenarioSchedule> =
+        getAll(context).filter { it.scenarioId == scenarioId && it.isDumb == isDumb }
 
     fun get(context: Context, id: Int): ScenarioSchedule? = getAll(context).firstOrNull { it.id == id }
 
     /** Add a new schedule and set its alarm. @return the created schedule. */
-    fun add(context: Context, scenarioId: Long, scenarioName: String, hour: Int, minute: Int, days: Int, mode: ScheduleMode): ScenarioSchedule {
+    fun add(
+        context: Context, scenarioId: Long, scenarioName: String, hour: Int, minute: Int, days: Int, mode: ScheduleMode,
+        isDumb: Boolean = false,
+    ): ScenarioSchedule {
         val all = getAll(context)
         val schedule = ScenarioSchedule(
             id = (all.maxOfOrNull { it.id } ?: 0) + 1,
             scenarioId = scenarioId, scenarioName = scenarioName,
-            hour = hour, minute = minute, days = days, mode = mode,
+            hour = hour, minute = minute, days = days, mode = mode, isDumb = isDumb,
         )
         save(context, all + schedule)
         setAlarm(context, schedule)
@@ -161,13 +165,14 @@ object ScenarioSchedules {
 
     private fun ScenarioSchedule.toJson(): JSONObject = JSONObject()
         .put("id", id).put("scenarioId", scenarioId).put("scenarioName", scenarioName)
-        .put("hour", hour).put("minute", minute).put("days", days).put("mode", mode.name).put("enabled", enabled)
+        .put("hour", hour).put("minute", minute).put("days", days).put("mode", mode.name).put("enabled", enabled).put("dumb", isDumb)
 
     private fun JSONObject.toSchedule(): ScenarioSchedule = ScenarioSchedule(
         id = getInt("id"), scenarioId = getLong("scenarioId"), scenarioName = optString("scenarioName"),
         hour = getInt("hour"), minute = getInt("minute"), days = getInt("days"),
         mode = runCatching { ScheduleMode.valueOf(getString("mode")) }.getOrDefault(ScheduleMode.ASK),
         enabled = optBoolean("enabled", true),
+        isDumb = optBoolean("dumb", false),
     )
 }
 

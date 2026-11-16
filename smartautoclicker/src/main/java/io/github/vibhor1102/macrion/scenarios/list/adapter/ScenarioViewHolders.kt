@@ -156,7 +156,14 @@ private fun DumbDetails(item: DumbScenarioItem, onCopy: () -> Unit, onDelete: ()
             Text(item.repeatText, style = MaterialTheme.typography.bodyLarge)
             Text(item.maxDurationText, style = MaterialTheme.typography.bodyLarge)
         }
-        ActionButtons(onCopy, onDelete)
+        ActionButtons(
+            onCopy = onCopy,
+            onDelete = onDelete,
+            onAddShortcut = {
+                ScenarioShortcuts.requestPinSmartScenario(context, item.scenario.id.databaseId, item.scenario.name, isDumb = true)
+            },
+            onSchedule = { ScheduleDialogs.show(context, item.scenario.id.databaseId, item.scenario.name, isDumb = true) },
+        )
     }
 }
 

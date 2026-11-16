@@ -139,8 +139,8 @@ class SmartAutoClickerService : AccessibilityService() {
                 override fun launchSmartScenario(resultCode: Int, data: Intent, scenario: Scenario) {
                     localServiceConnection.getLocalService()?.launchSmartScenario(resultCode, data, scenario)
                 }
-                override fun replaceDumbScenario(dumbScenario: DumbScenario) {
-                    localServiceConnection.getLocalService()?.replaceDumbScenario(dumbScenario)
+                override fun replaceDumbScenario(dumbScenario: DumbScenario, autoStart: Boolean) {
+                    localServiceConnection.getLocalService()?.replaceDumbScenario(dumbScenario, autoStart)
                 }
                 override fun replaceSmartScenario(resultCode: Int, data: Intent, scenario: Scenario, autoStart: Boolean) {
                     localServiceConnection.getLocalService()?.replaceSmartScenario(resultCode, data, scenario, autoStart = autoStart)

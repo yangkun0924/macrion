@@ -19,18 +19,18 @@ import java.util.Calendar
 /** Plain dialogs to list, add and remove the schedules of a scenario. */
 object ScheduleDialogs {
 
-    fun show(context: Context, scenarioId: Long, scenarioName: String) {
-        val schedules = ScenarioSchedules.getForScenario(context, scenarioId)
+    fun show(context: Context, scenarioId: Long, scenarioName: String, isDumb: Boolean = false) {
+        val schedules = ScenarioSchedules.getForScenario(context, scenarioId, isDumb)
         val builder = AlertDialog.Builder(context)
             .setTitle(context.getString(R.string.dialog_title_schedule, scenarioName))
-            .setPositiveButton(R.string.button_schedule_add) { _, _ -> pickTime(context, scenarioId, scenarioName) }
+            .setPositiveButton(R.string.button_schedule_add) { _, _ -> pickTime(context, scenarioId, scenarioName, isDumb) }
             .setNegativeButton(R.string.button_schedule_close, null)
 
         if (schedules.isEmpty()) {
             builder.setMessage(R.string.message_schedule_empty)
         } else {
             builder.setItems(schedules.map { describe(context, it) }.toTypedArray()) { _, index ->
-                editSchedule(context, schedules[index], scenarioId, scenarioName)
+                editSchedule(context, schedules[index], scenarioId, scenarioName, isDumb)
             }
         }
         builder.show()
@@ -54,7 +54,7 @@ object ScheduleDialogs {
         }
     }
 
-    private fun editSchedule(context: Context, schedule: ScenarioSchedule, scenarioId: Long, scenarioName: String) {
+    private fun editSchedule(context: Context, schedule: ScenarioSchedule, scenarioId: Long, scenarioName: String, isDumb: Boolean) {
         AlertDialog.Builder(context)
             .setTitle(describe(context, schedule))
             .setItems(
@@ -67,22 +67,22 @@ object ScheduleDialogs {
                     0 -> ScenarioSchedules.setEnabled(context, schedule.id, !schedule.enabled)
                     1 -> ScenarioSchedules.remove(context, schedule.id)
                 }
-                show(context, scenarioId, scenarioName)
+                show(context, scenarioId, scenarioName, isDumb)
             }
             .setNegativeButton(R.string.button_schedule_close, null)
             .show()
     }
 
-    private fun pickTime(context: Context, scenarioId: Long, scenarioName: String) {
+    private fun pickTime(context: Context, scenarioId: Long, scenarioName: String, isDumb: Boolean) {
         val now = Calendar.getInstance()
         TimePickerDialog(
             context,
-            { _, hour, minute -> pickDays(context, scenarioId, scenarioName, hour, minute) },
+            { _, hour, minute -> pickDays(context, scenarioId, scenarioName, isDumb, hour, minute) },
             now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE), DateFormat.is24HourFormat(context),
         ).apply { setTitle(R.string.dialog_title_schedule_time) }.show()
     }
 
-    private fun pickDays(context: Context, scenarioId: Long, scenarioName: String, hour: Int, minute: Int) {
+    private fun pickDays(context: Context, scenarioId: Long, scenarioName: String, isDumb: Boolean, hour: Int, minute: Int) {
         val names = context.resources.getStringArray(R.array.schedule_day_names)
         val checked = BooleanArray(7) { it < 5 } // Monday to Friday by default
         AlertDialog.Builder(context)
@@ -92,16 +92,16 @@ object ScheduleDialogs {
                 val days = checked.indices.filter { checked[it] }.fold(0) { acc, i -> acc or (1 shl i) }
                 if (days == 0) {
                     Toast.makeText(context, R.string.toast_schedule_no_day, Toast.LENGTH_SHORT).show()
-                    pickDays(context, scenarioId, scenarioName, hour, minute)
+                    pickDays(context, scenarioId, scenarioName, isDumb, hour, minute)
                 } else {
-                    pickMode(context, scenarioId, scenarioName, hour, minute, days)
+                    pickMode(context, scenarioId, scenarioName, isDumb, hour, minute, days)
                 }
             }
             .setNegativeButton(R.string.button_schedule_close, null)
             .show()
     }
 
-    private fun pickMode(context: Context, scenarioId: Long, scenarioName: String, hour: Int, minute: Int, days: Int) {
+    private fun pickMode(context: Context, scenarioId: Long, scenarioName: String, isDumb: Boolean, hour: Int, minute: Int, days: Int) {
         var mode = ScheduleMode.ASK
         AlertDialog.Builder(context)
             .setTitle(R.string.dialog_title_schedule_mode)
@@ -109,7 +109,7 @@ object ScheduleDialogs {
                 arrayOf(context.getString(R.string.item_schedule_mode_ask), context.getString(R.string.item_schedule_mode_auto)), 0,
             ) { _, which -> mode = if (which == 0) ScheduleMode.ASK else ScheduleMode.AUTO }
             .setPositiveButton(R.string.button_schedule_save) { _, _ ->
-                val schedule = ScenarioSchedules.add(context, scenarioId, scenarioName, hour, minute, days, mode)
+                val schedule = ScenarioSchedules.add(context, scenarioId, scenarioName, hour, minute, days, mode, isDumb)
                 Toast.makeText(
                     context, context.getString(R.string.toast_schedule_saved, describe(context, schedule)), Toast.LENGTH_LONG,
                 ).show()

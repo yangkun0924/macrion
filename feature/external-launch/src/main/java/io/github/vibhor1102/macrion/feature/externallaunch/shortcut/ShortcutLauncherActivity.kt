@@ -32,11 +32,15 @@ class ShortcutLauncherActivity : ComponentActivity() {
         private const val EXTRA_SCENARIO_ID =
             "io.github.vibhor1102.macrion.feature.externallaunch.shortcut.EXTRA_SCENARIO_ID"
 
-        fun getLaunchIntent(context: Context, scenarioId: Long): Intent =
+        private const val EXTRA_IS_DUMB =
+            "io.github.vibhor1102.macrion.feature.externallaunch.shortcut.EXTRA_IS_DUMB"
+
+        fun getLaunchIntent(context: Context, scenarioId: Long, isDumb: Boolean = false): Intent =
             Intent(context, ShortcutLauncherActivity::class.java)
                 .setAction(Intent.ACTION_VIEW)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 .putExtra(EXTRA_SCENARIO_ID, scenarioId)
+                .putExtra(EXTRA_IS_DUMB, isDumb)
     }
 
     private val viewModel: ShortcutLauncherViewModel by viewModels()
@@ -60,8 +64,18 @@ class ShortcutLauncherActivity : ComponentActivity() {
             activity = this,
             resumeExisting = false,
             onMandatoryDenied = ::finish,
-            onAllGranted = { onPermissionsGranted(scenarioId) },
+            onAllGranted = {
+                if (intent?.getBooleanExtra(EXTRA_IS_DUMB, false) == true) onDumbPermissionsGranted(scenarioId)
+                else onPermissionsGranted(scenarioId)
+            },
         )
+    }
+
+    private fun onDumbPermissionsGranted(scenarioId: Long) {
+        viewModel.launchDumbScenario(scenarioId) { found ->
+            if (!found) Toast.makeText(this, R.string.toast_shortcut_scenario_not_found, Toast.LENGTH_LONG).show()
+            finish()
+        }
     }
 
     private fun onPermissionsGranted(scenarioId: Long) {

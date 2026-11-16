@@ -15,6 +15,7 @@ import io.github.vibhor1102.macrion.core.common.permissions.model.PermissionAcce
 import io.github.vibhor1102.macrion.core.common.permissions.model.PermissionOverlay
 import io.github.vibhor1102.macrion.core.common.permissions.model.PermissionPostNotification
 import io.github.vibhor1102.macrion.core.domain.IRepository
+import io.github.vibhor1102.macrion.core.dumb.domain.DumbRepository
 import io.github.vibhor1102.macrion.core.domain.model.scenario.Scenario
 import io.github.vibhor1102.macrion.core.settings.domain.SettingsRepository
 import io.github.vibhor1102.macrion.feature.externallaunch.domain.ExternalLaunchRepository
@@ -31,6 +32,7 @@ class ShortcutLauncherViewModel @Inject constructor(
     private val externalLaunchRepository: ExternalLaunchRepository,
     val permissionController: PermissionsController,
     private val smartRepository: IRepository,
+    private val dumbRepository: DumbRepository,
     private val settingsRepository: SettingsRepository,
     private val appComponentsProvider: AppComponentsProvider,
 ) : ViewModel() {
@@ -75,6 +77,18 @@ class ShortcutLauncherViewModel @Inject constructor(
             scenario = scenario,
             autoStart = true,
         )
+    }
+
+    /**
+     * Load a dumb scenario and start it right away (it never needs the screen capture).
+     * @param onDone called on main thread with false if the scenario doesn't exist.
+     */
+    fun launchDumbScenario(scenarioId: Long, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val scenario = withContext(ioDispatcher) { dumbRepository.getDumbScenario(scenarioId) }
+            if (scenario != null) externalLaunchRepository.replaceDumbScenario(scenario, autoStart = true)
+            onDone(scenario != null)
+        }
     }
 
     /** Start the scenario with the media projection granted by the user. */

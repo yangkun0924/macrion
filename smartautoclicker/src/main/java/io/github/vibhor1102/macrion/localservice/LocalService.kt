@@ -166,7 +166,7 @@ class LocalService(
             .launchIn(serviceScope)
     }
 
-    override fun launchDumbScenario(dumbScenario: DumbScenario): Boolean {
+    override fun launchDumbScenario(dumbScenario: DumbScenario, autoStart: Boolean): Boolean {
         if (!isCleanForFreshLaunch()) return false
         state = LocalServiceState(isStarted = true, isSmartLoaded = false, sessionId = ++nextServiceSessionId)
         loadedDumbScenarioId = dumbScenario.id.databaseId
@@ -185,6 +185,12 @@ class LocalService(
                     onStopClicked = ::stopScenario,
                 ),
             )
+
+            // One tap launches (home screen shortcut, schedule) start right away.
+            if (autoStart) {
+                Log.i(TAG, "Auto starting dumb scenario ${dumbScenario.id.databaseId}")
+                dumbEngine.startDumbScenario()
+            }
         }
         return true
     }
@@ -252,8 +258,11 @@ class LocalService(
             )
 
             if (autoStart) {
-                if (shouldStartPaywall()) startPaywall(onlyIfRootVisible = true)
-                else startSmartScenario(onlyIfRootVisible = true)
+                // One tap launches (home screen shortcut, schedule): the menu was just shown, start right away
+                // instead of waiting for the user to press Play in it.
+                Log.i(TAG, "Auto starting scenario ${scenario.id.databaseId}")
+                if (shouldStartPaywall()) startPaywall(onlyIfRootVisible = false)
+                else startSmartScenario(onlyIfRootVisible = false)
             }
         }
         return true
@@ -285,10 +294,10 @@ class LocalService(
         }
     }
 
-    override fun replaceDumbScenario(dumbScenario: DumbScenario) {
+    override fun replaceDumbScenario(dumbScenario: DumbScenario, autoStart: Boolean) {
         serviceScope.launch {
             scenarioChangeMutex.withLock {
-                if (stopAndWait()) launchDumbScenario(dumbScenario)
+                if (stopAndWait()) launchDumbScenario(dumbScenario, autoStart = autoStart)
             }
         }
     }
@@ -449,10 +458,17 @@ class LocalService(
             // scenario different from the one the user saw when they pressed Play.
             if (!smartScenarioTransitionMutex.tryLock()) return@launch
             try {
-                if (!state.isSmartLoaded || smartProcessingRepository.isDetectionActive()) return@launch
+                if (!state.isSmartLoaded || smartProcessingRepository.isDetectionActive()) {
+                    Log.i(TAG, "Not starting: loaded=${state.isSmartLoaded}, active=${smartProcessingRepository.isDetectionActive()}")
+                    return@launch
+                }
                 if (onlyIfRootVisible &&
                     (overlayManager.isOverlayStackHidden() || overlayManager.hasOverlayAboveRoot())
-                ) return@launch
+                ) {
+                    Log.i(TAG, "Not starting: menu hidden or covered")
+                    return@launch
+                }
+                Log.i(TAG, "Starting detection")
 
                 smartProcessingRepository.startDetection(
                     context = context,
