@@ -224,7 +224,9 @@ object TapRecorder {
 
     private fun AccessibilityEvent.toStep(): Step? {
         val node = source
-        val eventText = text?.joinToString(" ") { it.toString() }?.trim().orEmpty()
+        // The event text holds the texts of all the children of the clicked view (e.g. title + summary of a list
+        // row): only use it when it is a single text, joined texts can't be found on screen when playing.
+        val eventText = text?.singleOrNull()?.toString()?.trim().orEmpty()
 
         val nodeText = node?.text?.toString()?.trim().orEmpty().ifEmpty { eventText }
         if (nodeText.isUsableText()) return Step.Element(TapElement.SelectorType.TEXT_EXACT, nodeText, nodeText)
