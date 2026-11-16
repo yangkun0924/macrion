@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_schedule">예약 실행</string>
+    <string name="dialog_title_schedule">%1$s 예약</string>
+    <string name="message_schedule_empty">아직 예약이 없어요. 추가하면 정한 시간에 이 시나리오를 실행해요.</string>
+    <string name="button_schedule_add">추가</string>
+    <string name="button_schedule_close">닫기</string>
+    <string name="button_schedule_next">다음</string>
+    <string name="button_schedule_save">저장</string>
+    <string name="button_schedule_pause">일시 중지</string>
+    <string name="button_schedule_resume">다시 켜기</string>
+    <string name="button_schedule_delete">삭제</string>
+    <string name="button_schedule_open_settings">설정 열기</string>
+    <string name="button_schedule_later">나중에</string>
+    <string name="dialog_title_schedule_time">시간</string>
+    <string name="dialog_title_schedule_days">요일</string>
+    <string name="dialog_title_schedule_mode">그 시간이 되면</string>
+    <string name="item_schedule_mode_ask">알림을 보내고, 내가 실행을 누르면 시작 (추천)</string>
+    <string name="item_schedule_mode_auto">바로 자동 실행</string>
+    <string name="item_schedule_mode_ask_short">알림 후 실행</string>
+    <string name="item_schedule_mode_auto_short">자동 실행</string>
+    <string name="item_schedule_paused">일시 중지됨</string>
+    <string name="item_schedule_every_day">매일</string>
+    <string name="item_schedule_weekdays">평일</string>
+    <string-array name="schedule_day_names">
+        <item>월</item>
+        <item>화</item>
+        <item>수</item>
+        <item>목</item>
+        <item>금</item>
+        <item>토</item>
+        <item>일</item>
+    </string-array>
+    <string name="toast_schedule_no_day">요일을 하나 이상 골라 주세요</string>
+    <string name="toast_schedule_saved">예약했어요: %1$s</string>
+    <string name="dialog_title_schedule_exact">정확한 시간에 실행</string>
+    <string name="message_schedule_exact">정확한 시간에 실행하려면 이 앱의 \"알람 및 리마인더\"를 허용해 주세요. 허용하지 않으면 안드로이드가 몇 분 늦게 실행할 수 있어요.</string>
+    <string name="notification_channel_schedule">예약 실행</string>
+    <string name="notification_schedule_title">%1$s 실행할까요?</string>
+    <string name="notification_schedule_text_ask">예약한 시간이에요. 실행을 누르면 바로 시작해요.</string>
+    <string name="notification_schedule_text_locked">폰이 잠겨 있어서 자동으로 시작하지 못했어요. 잠금을 풀고 실행을 눌러 주세요.</string>
+    <string name="notification_schedule_run">실행</string>
+    <string name="notification_schedule_skip">건너뛰기</string>
+</resources>

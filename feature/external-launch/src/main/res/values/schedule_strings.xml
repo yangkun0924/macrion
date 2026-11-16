@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_schedule">Schedule</string>
+    <string name="dialog_title_schedule">Schedules of %1$s</string>
+    <string name="message_schedule_empty">No schedule yet. Add one to run this scenario at a given time.</string>
+    <string name="button_schedule_add">Add</string>
+    <string name="button_schedule_close">Close</string>
+    <string name="button_schedule_next">Next</string>
+    <string name="button_schedule_save">Save</string>
+    <string name="button_schedule_pause">Pause</string>
+    <string name="button_schedule_resume">Resume</string>
+    <string name="button_schedule_delete">Delete</string>
+    <string name="button_schedule_open_settings">Open settings</string>
+    <string name="button_schedule_later">Later</string>
+    <string name="dialog_title_schedule_time">Time</string>
+    <string name="dialog_title_schedule_days">Days</string>
+    <string name="dialog_title_schedule_mode">At that time</string>
+    <string name="item_schedule_mode_ask">Notify me, run when I tap Run (recommended)</string>
+    <string name="item_schedule_mode_auto">Run automatically</string>
+    <string name="item_schedule_mode_ask_short">ask first</string>
+    <string name="item_schedule_mode_auto_short">automatic</string>
+    <string name="item_schedule_paused">paused</string>
+    <string name="item_schedule_every_day">Every day</string>
+    <string name="item_schedule_weekdays">Weekdays</string>
+    <string-array name="schedule_day_names">
+        <item>Mon</item>
+        <item>Tue</item>
+        <item>Wed</item>
+        <item>Thu</item>
+        <item>Fri</item>
+        <item>Sat</item>
+        <item>Sun</item>
+    </string-array>
+    <string name="toast_schedule_no_day">Select at least one day</string>
+    <string name="toast_schedule_saved">Scheduled: %1$s</string>
+    <string name="dialog_title_schedule_exact">Exact time</string>
+    <string name="message_schedule_exact">To run exactly on time, allow "Alarms &amp; reminders" for this app. Otherwise Android may delay the schedule by a few minutes.</string>
+    <string name="notification_channel_schedule">Scheduled runs</string>
+    <string name="notification_schedule_title">Run %1$s?</string>
+    <string name="notification_schedule_text_ask">It\'s the scheduled time. Tap Run to start it now.</string>
+    <string name="notification_schedule_text_locked">The phone was locked, so it couldn\'t start automatically. Unlock it and tap Run.</string>
+    <string name="notification_schedule_run">Run</string>
+    <string name="notification_schedule_skip">Skip</string>
+</resources>

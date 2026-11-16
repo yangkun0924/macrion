@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.vibhor1102.macrion.R
+import io.github.vibhor1102.macrion.feature.externallaunch.schedule.ScheduleDialogs
 import io.github.vibhor1102.macrion.feature.externallaunch.shortcut.ScenarioShortcuts
 import io.github.vibhor1102.macrion.feature.externallaunch.R as ExternalLaunchR
 import io.github.vibhor1102.macrion.core.domain.model.condition.ScreenCondition
@@ -198,14 +199,28 @@ private fun SmartDetails(
                 onAddShortcut = {
                     ScenarioShortcuts.requestPinSmartScenario(context, item.scenario.id.databaseId, item.scenario.name)
                 },
+                onSchedule = { ScheduleDialogs.show(context, item.scenario.id.databaseId, item.scenario.name) },
             )
         }
     }
 }
 
 @Composable
-private fun ActionButtons(onCopy: () -> Unit, onDelete: () -> Unit, onAddShortcut: (() -> Unit)? = null) {
+private fun ActionButtons(
+    onCopy: () -> Unit,
+    onDelete: () -> Unit,
+    onAddShortcut: (() -> Unit)? = null,
+    onSchedule: (() -> Unit)? = null,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (onSchedule != null) {
+            FilledTonalIconButton(onClick = onSchedule) {
+                Icon(
+                    painterResource(ExternalLaunchR.drawable.ic_schedule_run),
+                    stringResource(ExternalLaunchR.string.action_schedule),
+                )
+            }
+        }
         if (onAddShortcut != null) {
             FilledTonalIconButton(onClick = onAddShortcut) {
                 Icon(

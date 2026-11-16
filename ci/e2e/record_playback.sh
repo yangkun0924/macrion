@@ -130,36 +130,81 @@ if ! [[ "$ID" =~ ^[0-9]+$ ]]; then
 fi
 log "saved scenario id $ID"
 
-# Fresh state before playback.
-adb shell am force-stop $TARGET
-[ -n "$DECOY" ] && adb shell am force-stop $DECOY
-adb shell input keyevent KEYCODE_HOME; sleep 2
+reset_apps() {
+  adb shell am force-stop $TARGET
+  [ -n "$DECOY" ] && adb shell am force-stop $DECOY
+  adb shell input keyevent KEYCODE_HOME; sleep 2
+}
 
-log "play scenario $ID (same entry point as the home screen shortcut)"
-adb shell am start -n "$PKG/$LAUNCHER_ACTIVITY" --el "$EXTRA_ID" "$ID" | tee -a "$RESULT"
-sleep 4
-dump "playback_start"
-if python3 "$HERE/ui.py" has "$LAST" "(share your screen|start recording or casting|screen capture|화면.*공유|start now)"; then
-  fail "the 'share your screen' dialog showed up, playback must start directly"
-fi
-log "no screen sharing dialog"
-sleep 16
-dump "playback_end_screen"
-TOP=$(top_package)
-log "app on screen after playback: $TOP"
-adb logcat -d > "$OUT/logcat.txt"
-
-[ "$TOP" = "$TARGET" ] || fail "playback opened '$TOP' instead of '$TARGET'"
-
-SIMILARITY=$(python3 - "$EXPECTED" "$LAST" <<'EOF'
+# Check that a playback started directly (no screen sharing dialog) and ended on the recorded screen.
+check_playback() {
+  local label="$1"
+  sleep 4
+  dump "${label}_start"
+  if python3 "$HERE/ui.py" has "$LAST" "(share your screen|start recording or casting|screen capture|화면.*공유|start now)"; then
+    fail "[$label] the 'share your screen' dialog showed up, playback must start directly"
+  fi
+  log "[$label] no screen sharing dialog"
+  sleep 16
+  dump "${label}_end_screen"
+  TOP=$(top_package)
+  log "[$label] app on screen after playback: $TOP"
+  [ "$TOP" = "$TARGET" ] || fail "[$label] playback opened '$TOP' instead of '$TARGET'"
+  SIMILARITY=$(python3 - "$EXPECTED" "$LAST" <<'EOF2'
 import sys, xml.etree.ElementTree as ET
 def texts(p):
     return {n.get("text") for n in ET.parse(p).getroot().iter("node") if n.get("text")}
 a, b = texts(sys.argv[1]), texts(sys.argv[2])
 print(round(len(a & b) / max(1, len(a | b)), 2))
-EOF
+EOF2
 )
-log "end screen similarity with the recorded one: $SIMILARITY"
-python3 -c "import sys; sys.exit(0 if float('$SIMILARITY') >= 0.6 else 1)" || fail "playback did not end on the recorded screen"
+  log "[$label] end screen similarity with the recorded one: $SIMILARITY"
+  python3 -c "import sys; sys.exit(0 if float('$SIMILARITY') >= 0.6 else 1)" || fail "[$label] playback did not end on the recorded screen"
+  log "[$label] OK"
+}
 
+RECEIVER=io.github.vibhor1102.macrion.feature.externallaunch.schedule.ScheduleReceiver
+
+# 1. Home screen shortcut entry point.
+reset_apps
+log "play scenario $ID (same entry point as the home screen shortcut)"
+adb shell am start -n "$PKG/$LAUNCHER_ACTIVITY" --el "$EXTRA_ID" "$ID" | tee -a "$RESULT"
+check_playback "shortcut"
+
+# 2. Schedule in "ask first" mode: a notification shows up, tapping Run starts the scenario.
+reset_apps
+log "fire a schedule in ASK mode"
+adb shell am broadcast -n "$PKG/$RECEIVER" -a io.github.vibhor1102.macrion.schedule.TEST_FIRE \
+  --el scenarioId "$ID" --es scenarioName e2e --es mode ASK | tee -a "$RESULT"
+sleep 3
+adb shell dumpsys notification --noredact | grep -q "Run e2e?" || fail "schedule notification not shown"
+log "schedule notification shown"
+adb shell cmd statusbar expand-notifications; sleep 3
+tap "schedule_notification" "^run$" "^실행$" || fail "'Run' button not found in the schedule notification"
+check_playback "schedule_ask"
+
+# 3. Schedule in automatic mode: the scenario starts by itself.
+reset_apps
+log "fire a schedule in AUTO mode"
+adb shell am broadcast -n "$PKG/$RECEIVER" -a io.github.vibhor1102.macrion.schedule.TEST_FIRE \
+  --el scenarioId "$ID" --es scenarioName e2e --es mode AUTO | tee -a "$RESULT"
+check_playback "schedule_auto"
+
+# 4. Schedule dialog: add one from the scenario card and check the alarm is set.
+reset_apps
+adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+sleep 5
+tap "schedule_button" "^schedule$" "^예약 실행$" || fail "'Schedule' button not found on the scenario card"
+tap "schedule_add" "^add$" "^추가$" || fail "'Add' not found in the schedule dialog"
+tap "schedule_time_ok" "^ok$" "^확인$" || fail "time picker OK not found"
+tap "schedule_days_next" "^next$" "^다음$" || fail "days 'Next' not found"
+tap "schedule_mode_save" "^save$" "^저장$" || fail "mode 'Save' not found"
+dump "schedule_saved"
+# The exact alarm permission dialog may show: dismiss it.
+if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(later|나중에)$"); then adb shell input tap $pos; sleep 1; fi
+adb shell dumpsys alarm | grep -E "$PKG" | head -5 | tee -a "$RESULT"
+adb shell dumpsys alarm | grep -q "schedule.FIRE" || adb shell dumpsys alarm | grep -q "$PKG" || fail "no alarm set for the schedule"
+log "schedule alarm set"
+
+adb logcat -d > "$OUT/logcat.txt"
 log "PASS"
