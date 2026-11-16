@@ -514,7 +514,7 @@ class DetectorEngine @Inject constructor(
         }
     }
 
-    private fun acquireFrame(): Bitmap? =
+    private suspend fun acquireFrame(): Bitmap? =
         if (isScreenCaptureEnabled) displayRecorder.acquireLatestBitmap()
         else noCaptureFrame ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888).also { noCaptureFrame = it }
 
