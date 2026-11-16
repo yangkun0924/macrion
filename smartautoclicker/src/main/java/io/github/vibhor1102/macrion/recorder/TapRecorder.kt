@@ -155,6 +155,7 @@ object TapRecorder {
         steps.clear()
         _stepCount.value = 0
         val repo = repository ?: return null
+        Log.i(TAG, "Stop recording: ${recordedSteps.size} steps, app to launch $pkg")
         if (recordedSteps.isEmpty() && pkg == null) return null
 
         val name = scenarioName ?: (context.getString(io.github.vibhor1102.macrion.R.string.recorded_scenario_name) +
@@ -165,7 +166,9 @@ object TapRecorder {
         )
         val scenario = repo.getScenario(scenarioId) ?: return null
         val event = buildEvent(context, scenario, pkg, recordedSteps)
-        return if (repo.updateScenario(scenario, listOf(event), emptyList())) scenarioId to name else null
+        val saved = repo.updateScenario(scenario, listOf(event), emptyList())
+        Log.i(TAG, "Scenario $scenarioId '$name' saved=$saved with ${event.actions.size} actions")
+        return if (saved) scenarioId to name else null
     }
 
     private fun buildEvent(context: Context, scenario: Scenario, pkg: String?, steps: List<Step>): TriggerEvent {
@@ -228,7 +231,7 @@ object TapRecorder {
         val node = source
         // The event text holds the texts of all the children of the clicked view (e.g. title + summary of a list
         // row): only use it when it is a single text, joined texts can't be found on screen when playing.
-        val eventText = text?.singleOrNull()?.toString()?.trim().orEmpty()
+        val eventText = text.singleOrNull()?.toString()?.trim().orEmpty()
 
         val nodeText = node?.text?.toString()?.trim().orEmpty().ifEmpty { eventText }
         if (nodeText.isUsableText()) return Step.Element(TapElement.SelectorType.TEXT_EXACT, nodeText, nodeText)
