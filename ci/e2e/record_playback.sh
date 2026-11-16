@@ -24,8 +24,8 @@ fail() {
   log "FAIL: $*"; dump "fail"
   adb logcat -d > "$OUT/logcat.txt"
   echo "--- relevant logcat"
-  grep -E "TapRecorder|RecorderAction|ShortcutLauncher|SmartAutoClicker|LocalService|DetectorEngine|ScenarioProcessor|ElementTap|AndroidRuntime|FATAL|macrion" "$OUT/logcat.txt" \
-    | grep -v -E "StrictMode|chatty" | tail -150
+  grep -E " (TapRecorder|RecorderController|ShortcutLauncherActivity|PermissionsController|SmartAutoClickerService|LocalService|DetectorEngine|ScenarioProcessor|ScenarioSchedules|ScheduleReceiver|ElementTap[A-Za-z]*|AndroidActionExecutor[A-Za-z]*|AndroidRuntime: (FATAL|Process|java)|System.err)" "$OUT/logcat.txt" \
+    | grep -v -E "StrictMode|chatty|RuntimeInit|boot image|lock profiling|Calling main|Shutting down|VM exiting" | tail -150
   exit 1
 }
 
@@ -67,6 +67,7 @@ adb root >/dev/null 2>&1; adb wait-for-device
 adb install -r -g "$APK" || fail "install"
 adb shell settings put secure enabled_accessibility_services "$SVC"
 adb shell settings put secure accessibility_enabled 1
+adb shell appops set $PKG SYSTEM_ALERT_WINDOW allow
 adb shell settings put global heads_up_notifications_enabled 0
 sleep 3
 adb shell dumpsys accessibility | grep -q "$PKG" || fail "accessibility service not bound"
@@ -117,7 +118,7 @@ if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(add automatically|add|add to home
 fi
 
 echo "--- recorder logcat"
-adb logcat -d | grep -E "TapRecorder|RecorderAction|AndroidRuntime" | tail -40
+adb logcat -d | grep -E " (TapRecorder|RecorderController|ShortcutLauncherActivity|PermissionsController)" | tail -60
 DB=$(adb shell ls /data/data/$PKG/databases/ | tr -d '\r' | grep -v -E "journal|wal|shm" | head -1)
 log "database: $DB"
 adb shell "sqlite3 /data/data/$PKG/databases/$DB '.tables'" | tee -a "$RESULT"
