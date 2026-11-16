@@ -22,6 +22,8 @@ import android.content.Intent
 import android.graphics.Point
 import android.media.Image
 import android.media.projection.MediaProjectionManager
+import android.graphics.Bitmap
+import io.github.vibhor1102.macrion.core.base.capture.ScreenCaptureContract
 import android.os.SystemClock
 import android.util.Log
 
@@ -143,6 +145,10 @@ class DetectorEngine @Inject constructor(
     private var debugReportSessionStartNs: Long? = null
     /** True only for the user-configured rate limit; the unlimited-mode safety delay is not reported as limiter time. */
     private var isExecutionLimiterEnabled: Boolean = false
+    /** False when started with [ScreenCaptureContract.RESULT_CODE_NO_SCREEN_CAPTURE]: no media projection is used. */
+    private var isScreenCaptureEnabled: Boolean = true
+    /** Placeholder frame given to the processor when there is no screen capture. Screen events are refused then. */
+    private var noCaptureFrame: Bitmap? = null
 
     /**
      * Start the screen detection.
@@ -183,6 +189,14 @@ class DetectorEngine @Inject constructor(
 
         processingScope = CoroutineScope(ioDispatcher.limitedParallelism(1))
 
+        if (resultCode == ScreenCaptureContract.RESULT_CODE_NO_SCREEN_CAPTURE) {
+            Log.i(TAG, "startScreenRecord: started without screen capture")
+            isScreenCaptureEnabled = false
+            _state.value = DetectorState.RECORDING
+            return
+        }
+        isScreenCaptureEnabled = true
+
         displayConfigManager.addOrientationListener(screenOrientationListener)
 
         recordingStartJob = processingScope?.launch {
@@ -222,6 +236,10 @@ class DetectorEngine @Inject constructor(
     ): Boolean {
         if (_state.value != DetectorState.RECORDING) {
             Log.w(TAG, "startDetection: Screen record is not started.")
+            return false
+        }
+        if (!isScreenCaptureEnabled && screenEvents.isNotEmpty()) {
+            Log.e(TAG, "startDetection: scenario has screen events but was started without screen capture.")
             return false
         }
 
@@ -265,7 +283,7 @@ class DetectorEngine @Inject constructor(
                 quality = scenario.detectionQuality.toDouble(),
                 screenEvents = screenEvents,
             )
-            displayRecorder.resizeDisplay(scaledScreenSize)
+            if (isScreenCaptureEnabled) displayRecorder.resizeDisplay(scaledScreenSize)
             bitmapRepository.resizeCacheForDetection(computeDetectionBitmapsBytes(scaledScreenSize, screenEvents))
             currentCoroutineContext().ensureActive()
 
@@ -400,7 +418,7 @@ class DetectorEngine @Inject constructor(
             debugReportSessionStartNs = null
 
             scalingManager.stopScaling()
-            displayRecorder.resizeDisplay(displayConfigManager.displayConfig.sizePx)
+            if (isScreenCaptureEnabled) displayRecorder.resizeDisplay(displayConfigManager.displayConfig.sizePx)
             // Detection bitmaps are loaded again on every start, so retaining them while paused only wastes memory.
             // Clear after the processing job has ended and the recorder resize has dropped its reference to the last
             // scaled frame.
@@ -451,6 +469,9 @@ class DetectorEngine @Inject constructor(
 
             displayConfigManager.removeOrientationListener(screenOrientationListener)
             displayRecorder.stopProjection()
+            noCaptureFrame?.recycle()
+            noCaptureFrame = null
+            isScreenCaptureEnabled = true
             bitmapRepository.clearCache()
             bitmapRepository.resetCacheSize()
             _state.emit(DetectorState.CREATED)
@@ -470,7 +491,7 @@ class DetectorEngine @Inject constructor(
 
         var processingDurationNs: Long
         while (processingJob?.isActive == true && !orientationChangeRequested) {
-            displayRecorder.acquireLatestBitmap()?.let { screenFrame ->
+            acquireFrame()?.let { screenFrame ->
                 processingDurationNs = measureNanoTime {
                     scenarioProcessor?.process(screenFrame)
                 }
@@ -492,6 +513,10 @@ class DetectorEngine @Inject constructor(
             } ?: delay(NO_IMAGE_DELAY_MS.milliseconds)
         }
     }
+
+    private fun acquireFrame(): Bitmap? =
+        if (isScreenCaptureEnabled) displayRecorder.acquireLatestBitmap()
+        else noCaptureFrame ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888).also { noCaptureFrame = it }
 
     /**
      * Creates a new job executing the provided job automatically once the job is effectively created.

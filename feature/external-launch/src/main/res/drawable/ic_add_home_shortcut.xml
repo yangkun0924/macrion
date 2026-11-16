@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Add to home screen": a house outline with a plus. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M12,3L2,11.5L3.3,13L5,11.6L5,21L13,21L13,19L7,19L7,9.9L12,5.6L17,9.9L17,13L19,13L19,11.6L20.7,13L22,11.5Z"/>
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M17,15L19,15L19,17L21,17L21,19L19,19L19,21L17,21L17,19L15,19L15,17L17,17Z"/>
+</vector>

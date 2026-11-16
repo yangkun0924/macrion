@@ -53,6 +53,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.vibhor1102.macrion.R
+import io.github.vibhor1102.macrion.feature.externallaunch.shortcut.ScenarioShortcuts
+import io.github.vibhor1102.macrion.feature.externallaunch.R as ExternalLaunchR
 import io.github.vibhor1102.macrion.core.domain.model.condition.ScreenCondition
 import io.github.vibhor1102.macrion.core.dumb.domain.model.DumbScenario as DumbScenarioModel
 import io.github.vibhor1102.macrion.feature.smart.config.ui.common.formatters.toEffectDescription
@@ -190,14 +192,28 @@ private fun SmartDetails(
                 }
             }
             Spacer(Modifier.width(16.dp))
-            ActionButtons(onCopy, onDelete)
+            ActionButtons(
+                onCopy = onCopy,
+                onDelete = onDelete,
+                onAddShortcut = {
+                    ScenarioShortcuts.requestPinSmartScenario(context, item.scenario.id.databaseId, item.scenario.name)
+                },
+            )
         }
     }
 }
 
 @Composable
-private fun ActionButtons(onCopy: () -> Unit, onDelete: () -> Unit) {
+private fun ActionButtons(onCopy: () -> Unit, onDelete: () -> Unit, onAddShortcut: (() -> Unit)? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (onAddShortcut != null) {
+            FilledTonalIconButton(onClick = onAddShortcut) {
+                Icon(
+                    painterResource(ExternalLaunchR.drawable.ic_add_home_shortcut),
+                    stringResource(ExternalLaunchR.string.action_add_home_shortcut),
+                )
+            }
+        }
         FilledTonalIconButton(onClick = onCopy) { Icon(painterResource(R.drawable.ic_copy), null) }
         FilledTonalIconButton(onClick = onDelete) { Icon(painterResource(R.drawable.ic_delete), null) }
     }

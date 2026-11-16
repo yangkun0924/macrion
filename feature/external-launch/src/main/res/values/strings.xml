@@ -57,4 +57,10 @@
     <string name="external_action_event_empty">Create an External Action inside a Macrion smart scenario first, then come back here.</string>
     <string name="external_action_event_missing_name">This saved name is not currently used in Macrion. You can save unchanged, or choose another name.</string>
     <string name="external_action_event_blurb">External action: %1$s</string>
+
+    <!-- Home screen shortcuts -->
+    <string name="shortcut_default_label">Scenario</string>
+    <string name="toast_shortcut_not_supported">Your launcher does not support pinned shortcuts</string>
+    <string name="toast_shortcut_scenario_not_found">This scenario no longer exists. Remove the shortcut and create a new one.</string>
+    <string name="action_add_home_shortcut">Add to home screen</string>
 </resources>
