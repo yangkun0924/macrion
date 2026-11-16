@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dialog_title_permission_issue">문제 해결</string>
+    <string name="message_accessibility_issues">접근성 서비스 권한이 여러 번 해제된 것 같아요. 직접 끈 게 아니라면 기기가 해제한 거예요.\n\n일부 안드로이드 제조사는 백그라운드 앱에 대한 표준 동작을 따르지 않아서, 기기 브랜드에 따라 추가 설정이 필요할 수 있어요.\n\n아래 웹사이트에서 이 문제와 권한을 안정적으로 유지하는 방법을 확인하세요.</string>
+</resources>

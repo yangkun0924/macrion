@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_title">시나리오: %1$s</string>
+    <string name="notification_scenario_label">시나리오</string>
+    <string name="notification_message">눌러서 시나리오 바꾸기</string>
+    <string name="notification_button_play">실행</string>
+    <string name="notification_button_pause">일시 정지</string>
+    <string name="notification_button_show">보이기</string>
+    <string name="notification_button_hide">숨기기</string>
+    <string name="notification_button_stop">멈추기</string>
+    <string name="notification_button_config">설정</string>
+    <string name="notification_button_switch">시나리오 전환</string>
+</resources>

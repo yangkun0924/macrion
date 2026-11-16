@@ -753,5 +753,5 @@
     <string name="field_tap_element_value_content_desc">Content description to look for</string>
     <string name="field_tap_element_timeout">Wait up to (seconds)</string>
     <string name="field_tap_element_timeout_desc">From 0 to 60 seconds. If the element does not appear, the next actions of this event are skipped.</string>
-    <string name="message_tap_element_help">The element is searched in the app currently on screen using accessibility, so it keeps working when the layout or screen size changes. Use the screen inspector to find texts and resource ids.</string>
+    <string name="message_tap_element_help">The element is searched in the app currently on screen using accessibility, so it keeps working when the layout or screen size changes.</string>
 </resources>

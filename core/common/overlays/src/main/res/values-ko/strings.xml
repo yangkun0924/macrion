@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dialog_move_to_title">이동</string>
+    <string name="dialog_jump_to_title">바로 가기</string>
+    <string name="dialog_move_to_position_label">순서</string>
+    <string name="dialog_reorder_empty">항목 없음</string>
+    <string name="dialog_reorder_discard_title">변경 사항을 버릴까요?</string>
+    <string name="dialog_reorder_discard_message">저장하지 않은 변경 사항이 있어요. 버릴까요?</string>
+    <string name="dialog_reorder_discard_confirm">버리기</string>
+    <string name="overlay_instructions_gesture_record">제스처 녹화 중…</string>
+    <string name="swipe_position_record">제스처 녹화</string>
+    <string name="swipe_position_drag_instruction">시작이나 끝을 끌어서 스와이프를 조정하세요</string>
+    <string name="swipe_position_drag_node_instruction">아무 핸들이나 끌어서 스와이프를 조정하세요</string>
+    <string name="swipe_position_record_instruction">스와이프를 한 번 그려서 두 위치를 정하세요</string>
+    <string name="swipe_position_short_gesture">스와이프를 그려서 두 위치를 정하세요</string>
+    <string name="swipe_position_multi_touch">스와이프는 손가락 하나만 써요. 여러 손가락은 멀티 터치 액션을 만드세요.</string>
+    <string name="swipe_position_record_failed">스와이프를 녹화하지 못했어요. 다시 시도하세요.</string>
+    <string name="swipe_position_start">시작</string>
+    <string name="swipe_position_end">끝</string>
+    <string name="swipe_position_node">점 %1$d</string>
+    <string name="swipe_position_move_left">%1$s 왼쪽으로 이동</string>
+    <string name="swipe_position_move_right">%1$s 오른쪽으로 이동</string>
+    <string name="swipe_position_move_up">%1$s 위로 이동</string>
+    <string name="swipe_position_move_down">%1$s 아래로 이동</string>
+    <string name="brief_handle_moved_click">클릭 위치를 옮겼어요</string>
+    <string name="brief_handle_moved_swipe_start">스와이프 시작점을 옮겼어요</string>
+    <string name="brief_handle_moved_swipe_node">스와이프 점을 옮겼어요</string>
+    <string name="brief_handle_moved_swipe_end">스와이프 끝점을 옮겼어요</string>
+    <string name="brief_handle_undo">실행 취소</string>
+</resources>

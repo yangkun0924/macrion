@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_scenario_channel_group_name">Macrion 시나리오</string>
+    <string name="notification_scenario_channel_low_name">낮음</string>
+    <string name="notification_scenario_channel_default_name">보통</string>
+    <string name="notification_scenario_channel_high_name">높음</string>
+</resources>
