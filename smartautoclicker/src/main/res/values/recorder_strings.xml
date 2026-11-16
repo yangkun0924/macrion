@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="recorded_scenario_name">Recorded</string>
+    <string name="recorded_event_name">Recorded taps</string>
+    <string name="recorded_condition_name">On start</string>
+    <string name="recorded_step_launch_app">Open app</string>
+    <string name="recorded_step_finish">Finish</string>
+    <string name="menu_item_title_record">Record taps</string>
+    <string name="toast_recorder_service_disabled">Enable the Macrion accessibility service first, then try again.</string>
+    <string name="toast_recorder_started">Recording. Open the app and tap through it, then press Stop in the notification.</string>
+    <string name="toast_recorder_nothing_recorded">Nothing was recorded.</string>
+    <string name="toast_recorder_saved">Scenario saved. Add it to your home screen to run it with one tap.</string>
+    <string name="toast_recorder_cancelled">Recording cancelled.</string>
+    <string name="toast_recorder_notification_denied">Allow notifications to get the Stop button while recording.</string>
+    <string name="notification_channel_recorder">Tap recording</string>
+    <string name="notification_recorder_title">Recording your taps</string>
+    <string name="notification_recorder_text">Open the app and tap like usual. Press Stop when you are done.</string>
+    <string name="notification_recorder_stop">Stop and save</string>
+    <string name="notification_recorder_cancel">Cancel</string>
+</resources>

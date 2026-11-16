@@ -64,6 +64,7 @@ internal fun ComposeScenarioList(
     onSmartChipClicked: (Boolean) -> Unit,
     onDumbChipClicked: (Boolean) -> Unit,
     onSortOrderClicked: (Boolean) -> Unit,
+    onRecord: (() -> Unit)? = null,
 ) {
     val content = uiState?.listContent.orEmpty()
     val isSelection = uiState?.type == ScenarioListUiState.Type.SELECTION
@@ -94,6 +95,7 @@ internal fun ComposeScenarioList(
                 },
                 actions = {
                     val menu = uiState?.menuUiState ?: return@TopAppBar
+                    if (isSelection && onRecord != null) ScenarioToolbarButton(R.drawable.ic_record_taps, R.string.menu_item_title_record, true, onRecord)
                     if (menu.cancelItemState.visible) ScenarioToolbarButton(R.drawable.ic_cancel, R.string.menu_item_title_cancel, menu.cancelItemState.enabled, onCancel)
                     if (menu.selectAllItemState.visible) ScenarioToolbarButton(R.drawable.ic_select_all, R.string.menu_item_title_select_all, menu.selectAllItemState.enabled, onSelectAll)
                     if (menu.importExportItemState.visible) ScenarioToolbarButton(R.drawable.ic_load, R.string.menu_item_title_import, menu.importExportItemState.enabled, onImportExport)

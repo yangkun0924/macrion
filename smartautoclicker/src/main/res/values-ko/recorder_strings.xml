@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="recorded_scenario_name">녹화</string>
+    <string name="recorded_event_name">녹화한 탭</string>
+    <string name="recorded_condition_name">시작 시</string>
+    <string name="recorded_step_launch_app">앱 열기</string>
+    <string name="recorded_step_finish">종료</string>
+    <string name="menu_item_title_record">탭 녹화</string>
+    <string name="toast_recorder_service_disabled">먼저 Macrion 접근성 서비스를 켠 다음 다시 시도해 주세요.</string>
+    <string name="toast_recorder_started">녹화 중이에요. 앱을 열어 평소처럼 누른 다음 알림에서 종료를 눌러 주세요.</string>
+    <string name="toast_recorder_nothing_recorded">녹화된 내용이 없어요.</string>
+    <string name="toast_recorder_saved">시나리오를 저장했어요. 홈 화면에 추가하면 원터치로 실행할 수 있어요.</string>
+    <string name="toast_recorder_cancelled">녹화를 취소했어요.</string>
+    <string name="toast_recorder_notification_denied">녹화 중 종료 버튼을 보려면 알림을 허용해 주세요.</string>
+    <string name="notification_channel_recorder">탭 녹화</string>
+    <string name="notification_recorder_title">탭을 녹화하고 있어요</string>
+    <string name="notification_recorder_text">앱을 열어 평소처럼 눌러 주세요. 다 했으면 종료를 누르세요.</string>
+    <string name="notification_recorder_stop">종료하고 저장</string>
+    <string name="notification_recorder_cancel">취소</string>
+</resources>

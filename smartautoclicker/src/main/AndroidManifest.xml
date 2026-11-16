@@ -44,6 +44,14 @@
         <service android:name="org.acra.sender.JobSenderService" tools:node="remove" />
         <provider android:name="org.acra.attachment.AcraContentProvider" tools:node="remove" />
 
+        <activity
+            android:name="io.github.vibhor1102.macrion.recorder.RecorderActionActivity"
+            android:theme="@style/AppTheme.TranslucentActivity"
+            android:taskAffinity=""
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"/>
+
         <activity android:name="io.github.vibhor1102.macrion.crash.CrashReportsActivity"
             android:exported="false" />
 

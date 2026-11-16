@@ -17,6 +17,7 @@
  */
 package io.github.vibhor1102.macrion.scenarios.list
 
+import io.github.vibhor1102.macrion.recorder.RecorderController
 import android.content.Intent
 import androidx.activity.ComponentActivity
 
@@ -166,6 +167,7 @@ class ScenarioListHost(
                         onSmartChipClicked = scenarioListViewModel::updateSmartVisible,
                         onDumbChipClicked = scenarioListViewModel::updateDumbVisible,
                         onSortOrderClicked = scenarioListViewModel::updateSortOrder,
+                        onRecord = { RecorderController.startRecording(activity) },
                     )
 
                     when (val currentDialog = activeDialog) {

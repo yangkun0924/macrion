@@ -56,6 +56,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.io.FileDescriptor
 import java.io.PrintWriter
 import javax.inject.Inject
+import io.github.vibhor1102.macrion.recorder.TapRecorder
 
 /**
  * AccessibilityService implementation for the SmartAutoClicker.
@@ -111,6 +112,7 @@ class SmartAutoClickerService : AccessibilityService() {
         }
 
         qualityMetricsMonitor.onServiceConnected()
+        TapRecorder.attach(this, smartRepository)
         actionExecutor.init(this) { service ->
             // Do not retain this service through the singleton executor's failure callback.
             (service as SmartAutoClickerService).onGestureExecutionFailed()
@@ -193,6 +195,7 @@ class SmartAutoClickerService : AccessibilityService() {
 
         qualityMetricsMonitor.onServiceUnbind()
         actionExecutor.clear()
+        TapRecorder.detach()
         return super.onUnbind(intent)
     }
 
@@ -289,7 +292,7 @@ class SmartAutoClickerService : AccessibilityService() {
     }
 
     override fun onInterrupt() { /* Unused */ }
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) { /* Unused */ }
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) { TapRecorder.onAccessibilityEvent(event) }
 }
 
 /** Tag for the logs. */
