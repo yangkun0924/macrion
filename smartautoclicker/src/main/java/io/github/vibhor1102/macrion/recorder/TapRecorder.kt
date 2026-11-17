@@ -118,19 +118,24 @@ object TapRecorder {
         // The app to launch is the one of the first real tap made in a regular app window. Window changes are not used
         // for it: on some devices (Samsung Pass, autofill, keyboards, edge panels...) a system window shows up first.
         if (event.eventType != AccessibilityEvent.TYPE_VIEW_CLICKED) return
-        if (!event.isInApplicationWindow()) return
+        if (!event.isInApplicationWindow()) {
+            Log.d(TAG, "Click ignored: not in an application window")
+            return
+        }
 
         if (startPackage == null) startPackage = pkg
-        val step = event.toStep() ?: return
+        val step = event.toStep() ?: return Unit.also { Log.d(TAG, "Click ignored: no usable selector") }
         steps.add(step)
         _stepCount.value = steps.size
         Log.d(TAG, "Recorded $step in $pkg")
     }
 
+    /** False for keyboards, system windows (biometric prompts, shade...) and overlays, true otherwise. */
     private fun AccessibilityEvent.isInApplicationWindow(): Boolean {
-        val windows = serviceRef?.get()?.windows ?: return true
+        val windows = try { serviceRef?.get()?.windows } catch (_: Exception) { null } ?: return true
         val window = windows.firstOrNull { it.id == windowId } ?: return true
-        return window.type == AccessibilityWindowInfo.TYPE_APPLICATION
+        Log.d(TAG, "Click in window $windowId of type ${window.type}")
+        return window.type !in NOT_APP_WINDOW_TYPES
     }
 
     /** Stop recording without saving. */
@@ -302,6 +307,14 @@ object TapRecorder {
 }
 
 private const val TAG = "TapRecorder"
+
+private val NOT_APP_WINDOW_TYPES = setOf(
+    AccessibilityWindowInfo.TYPE_INPUT_METHOD,
+    AccessibilityWindowInfo.TYPE_SYSTEM,
+    AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY,
+    AccessibilityWindowInfo.TYPE_SPLIT_SCREEN_DIVIDER,
+    AccessibilityWindowInfo.TYPE_MAGNIFICATION_OVERLAY,
+)
 
 /** Packages showing system windows over other apps, never the app the user wants to automate. */
 private val SYSTEM_OVERLAY_PACKAGES = setOf(
