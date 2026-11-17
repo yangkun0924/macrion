@@ -18,7 +18,7 @@
     <string name="content_desc_show_all_action_previews">모든 액션 미리보기 표시</string>
     <string name="action_previews_all_on">모든 액션</string>
     <string name="action_previews_all_off">현재 액션만</string>
-    <string name="content_desc_open_home">시나리오를 멈추고 Macrion 홈 열기</string>
+    <string name="content_desc_open_home">시나리오를 멈추고 터치마스터 홈 열기</string>
     <string name="generic_name">이름</string>
     <string name="generic_select_the_position">위치 선택</string>
     <string name="generic_config">설정</string>
@@ -111,11 +111,11 @@
     <string name="play_sound_tip_custom_files">팁: 원하는 소리를 쓰려면 파일 관리자로 오디오 파일을 휴대폰의 Notifications 폴더에 넣으세요. 여기에 자동으로 나타나요.</string>
     <string name="item_capture_screenshot_title">스크린샷 캡처</string>
     <string name="item_capture_screenshot_desc">화면을 캡처해서 저장해요</string>
-    <string name="item_capture_screenshot_details_default">위치: Pictures/Macrion</string>
+    <string name="item_capture_screenshot_details_default">위치: Pictures/터치마스터</string>
     <string name="item_capture_screenshot_details_custom">위치: %1$s</string>
     <string name="dialog_title_capture_screenshot">스크린샷 캡처</string>
     <string name="capture_screenshot_location_label">저장 위치</string>
-    <string name="capture_screenshot_location_default">Pictures/Macrion (기본)</string>
+    <string name="capture_screenshot_location_default">Pictures/터치마스터 (기본)</string>
     <string name="capture_screenshot_button_choose_folder">폴더 선택</string>
     <string name="capture_screenshot_button_reset_folder">기본값으로 되돌리기</string>
     <string name="capture_screenshot_button_open_folder">파일 앱에서 폴더 열기</string>
@@ -150,7 +150,7 @@
     <string name="field_scenario_fps_dropdown_item_minute">분</string>
     <string name="field_condition_fps_limit_desc">배터리와 CPU를 아끼기 위해 이 조건을 확인하는 빈도를 제한해요. 감지가 느려져요.</string>
     <string name="field_scenario_quality_title">감지 해상도</string>
-    <string name="field_scenario_quality_description">빠르게 감지하기 위해 Macrion은 이미지를 줄인 다음 감지해요.\n\n해상도를 높이면 느리지만 더 정확해지고, 낮추면 빠르지만 덜 정확해져요. 감지 해상도와 조건 오차 사이의 적당한 균형을 찾아 보세요!</string>
+    <string name="field_scenario_quality_description">빠르게 감지하기 위해 터치마스터는 이미지를 줄인 다음 감지해요.\n\n해상도를 높이면 느리지만 더 정확해지고, 낮추면 빠르지만 덜 정확해져요. 감지 해상도와 조건 오차 사이의 적당한 균형을 찾아 보세요!</string>
     <string name="field_counters_title">카운터</string>
     <string name="field_counters_desc_empty">정의된 카운터 없음</string>
     <plurals name="field_counters_desc">
@@ -302,7 +302,7 @@
     <string name="field_change_counter_effect_desc_operation">%1$s = %1$s %2$s %3$s</string>
     <string name="dialog_title_external_action">외부 액션</string>
     <string name="field_external_action_name_label">외부 액션 이름</string>
-    <string name="field_external_action_help">Tasker, Macrion, MacroDroid 같은 자동화 앱이 받을 수 있는 이벤트를 보내요.</string>
+    <string name="field_external_action_help">Tasker, 터치마스터, MacroDroid 같은 자동화 앱이 받을 수 있는 이벤트를 보내요.</string>
     <string name="button_documentation">문서</string>
     <string name="field_external_action_selection_title_empty">선택한 외부 액션 없음</string>
     <string name="field_external_action_selection_desc_empty">여기를 눌러 기존 외부 액션 이름을 다시 써요</string>
@@ -391,13 +391,13 @@
     <string name="warning_dialog_message_close_without_saving">저장하지 않은 변경 사항이 있어요. 버릴까요?</string>
     <string name="warning_dialog_message_delete">이 항목을 삭제할까요?</string>
     <string name="error_dialog_message_scenario_saving">내부 오류로 시나리오를 저장할 수 없어요.\n계속 수정할까요, 아니면 변경 사항을 모두 취소할까요?</string>
-    <string name="error_dialog_message_error_native_lib">Macrion이 잘못 설치되어 감지를 시작할 수 없어요.\n\n정식 앱 스토어에서 설치했다면 GitHub로 알려 주세요. 문제 해결에 도움이 돼요.</string>
-    <string name="error_dialog_message_screen_capture_unsupported">드라이버 제한 때문에 Macrion이 이 기기의 화면을 읽을 수 없어요.\n\n하드웨어 제약이라 우회할 방법이 없어요. 기기 모델을 GitHub로 알려 주시면 해당 기기를 추적할게요.</string>
+    <string name="error_dialog_message_error_native_lib">터치마스터가 잘못 설치되어 감지를 시작할 수 없어요.\n\n정식 앱 스토어에서 설치했다면 GitHub로 알려 주세요. 문제 해결에 도움이 돼요.</string>
+    <string name="error_dialog_message_screen_capture_unsupported">드라이버 제한 때문에 터치마스터가 이 기기의 화면을 읽을 수 없어요.\n\n하드웨어 제약이라 우회할 방법이 없어요. 기기 모델을 GitHub로 알려 주시면 해당 기기를 추적할게요.</string>
     <string name="dialog_screenshot_rate_limit_title">스크린샷 한도 도달</string>
     <plurals name="dialog_screenshot_rate_limit_message">
         <item quantity="other">1분에 스크린샷을 %1$d장 넘게 찍어서 시나리오를 일시 정지했어요. 기기 저장 공간이 가득 차는 걸 막기 위해서예요.\n\n설정 > 고급 설정에서 한도를 바꾸거나 시나리오에 대기를 추가하세요.</item>
     </plurals>
-    <string name="dialog_stop_confirmation_title">Macrion을 멈출까요?</string>
+    <string name="dialog_stop_confirmation_title">터치마스터를 멈출까요?</string>
     <string name="dialog_stop_confirmation_message">현재 시나리오가 멈춰요.</string>
     <string name="dialog_stop_confirmation_stop">멈추기</string>
     <string name="content_desc_event_state">이벤트 상태</string>

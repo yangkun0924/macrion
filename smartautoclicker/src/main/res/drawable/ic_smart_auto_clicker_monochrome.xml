@@ -1,22 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Themed (one color) version of the coffee cup icon. -->
+<!-- Single-colour armoured robot for themed icons: the visor is cut out of the helmet, the eyes sit inside it. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="3.2"
-        android:strokeLineCap="round"
-        android:pathData="M44,39 C41,35.5 47,33.5 44,29 M52,39 C49,35.5 55,33.5 52,29 M60,39 C57,35.5 63,33.5 60,29" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="4.5"
-        android:pathData="M70,50.5 H74.5 A5.75,5.75 0 0 1 74.5,62 H69.5" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M32,73.5 H76 A3,3 0 0 1 76,79.5 H32 A3,3 0 0 1 32,73.5 Z M33,46 V56 C33,65 40,72 49,72 H55 C64,72 71,65 71,56 V46 Z M33,46 A19,4.2 0 1 0 71,46 A19,4.2 0 1 0 33,46 Z" />
+    <group
+        android:pivotX="54"
+        android:pivotY="52"
+        android:scaleX="0.8"
+        android:scaleY="0.8">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M42,27 H66 L75,36 L73,55 L64,65 H44 L35,55 L33,36 Z M37,38 H71 L68,49 H40 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M41,40.5 L51.5,44 L51,47 H42 Z M67,40.5 L56.5,44 L57,47 H66 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M54,33 L33,17 L37,16 L54,27 L71,16 L75,17 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M16,80 L22,68 L38,67 H70 L86,68 L92,80 V112 H16 Z M54,72 L62,79 L54,86 L46,79 Z" />
+    </group>
 </vector>

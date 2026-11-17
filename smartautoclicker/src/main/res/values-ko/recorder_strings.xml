@@ -7,7 +7,7 @@
     <string name="recorded_step_swipe">스와이프</string>
     <string name="recorded_step_finish">종료</string>
     <string name="menu_item_title_record">탭 녹화</string>
-    <string name="toast_recorder_service_disabled">먼저 Macrion 접근성 서비스를 켠 다음 다시 시도해 주세요.</string>
+    <string name="toast_recorder_service_disabled">먼저 터치마스터 접근성 서비스를 켠 다음 다시 시도해 주세요.</string>
     <string name="toast_recorder_started">녹화 중이에요. 앱을 열어 평소처럼 누른 다음 알림에서 종료를 눌러 주세요.</string>
     <string name="toast_recorder_nothing_recorded">녹화된 내용이 없어요.</string>
     <string name="toast_recorder_saved">시나리오를 저장했어요. 홈 화면에 추가하면 원터치로 실행할 수 있어요.</string>
