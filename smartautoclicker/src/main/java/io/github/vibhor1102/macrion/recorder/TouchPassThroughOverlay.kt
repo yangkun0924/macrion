@@ -66,7 +66,7 @@ internal class TouchPassThroughOverlay(
         val newView = object : View(service) {
             override fun dispatchTouchEvent(event: MotionEvent): Boolean {
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) Log.i(TAG, "dispatchTouchEvent down")
-                onTouchEvent(event)
+                handleTouch(event)
                 return true
             }
         }.apply {
@@ -102,7 +102,7 @@ internal class TouchPassThroughOverlay(
         forwarding = false
     }
 
-    private fun onTouchEvent(event: MotionEvent) {
+    private fun handleTouch(event: MotionEvent) {
         if (event.actionMasked != MotionEvent.ACTION_MOVE) {
             Log.d(TAG, "Touch ${MotionEvent.actionToString(event.actionMasked)} at ${event.rawX},${event.rawY} forwarding=$forwarding")
         }
