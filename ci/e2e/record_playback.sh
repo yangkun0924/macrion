@@ -8,6 +8,7 @@
 set -u
 APK="$1"
 OUT="$2"
+WEB_APK="${3:-}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PKG=io.github.vibhor1102.macrion.debug
 SVC=$PKG/io.github.vibhor1102.macrion.SmartAutoClickerService
@@ -234,6 +235,66 @@ if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(later|나중에)$"); then adb she
 adb shell dumpsys alarm | grep -E "$PKG" | head -5 | tee -a "$RESULT"
 adb shell dumpsys alarm | grep -q "schedule.FIRE" || adb shell dumpsys alarm | grep -q "$PKG" || fail "no alarm set for the schedule"
 log "schedule alarm set"
+
+# 5. Web page menu, like the company app: native screen -> "Order menu" -> web page -> "Coffee" tab -> scroll to the
+#    bottom -> "Iced americano". The playback must scroll by itself to find the item.
+if [ -n "$WEB_APK" ]; then
+  WEB=io.github.e2e.coffee
+  adb install -r "$WEB_APK" || fail "web app install"
+  read -r W H < <(adb shell wm size | tr -d '\r' | sed -E 's/.* ([0-9]+)x([0-9]+)$/\1 \2/')
+  SWIPE="$((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 4)) 400"
+  adb shell input keyevent KEYCODE_HOME; sleep 2
+
+  adb shell monkey -p $WEB -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  sleep 4; dump "web_find_home"
+  WP1=$(pos_in "$LAST" "^order menu$") || fail "web app 'Order menu' button not found"
+  adb shell input tap $WP1; sleep 6; dump "web_find_menu"
+  WP2=$(pos_in "$LAST" "^coffee$") || fail "web page 'Coffee' tab not found"
+  adb shell input tap $WP2; sleep 2
+  for _ in 1 2 3 4 5 6 7 8; do adb shell input swipe $SWIPE; sleep 1; done
+  dump "web_find_bottom"
+  WP3=$(pos_in "$LAST" "^iced americano$") || fail "web page 'Iced americano' not found at the bottom"
+  adb shell input tap $WP3; sleep 2; dump "web_expected_end"
+  python3 "$HERE/ui.py" has "$LAST" "^ordered: iced americano$" || fail "the web page did not take the order by hand"
+  log "web taps: $WP1, $WP2, scroll, $WP3"
+  adb shell am force-stop $WEB
+  adb shell input keyevent KEYCODE_HOME; sleep 3
+
+  # Record it.
+  adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  sleep 5
+  adb shell dumpsys accessibility | grep -q "$PKG" || fail "accessibility service not bound before the web recording"
+  adb shell input tap $REC; sleep 3; shot "web_recording_started"
+  adb shell dumpsys notification --noredact | grep -q "Recording your taps" || fail "web recording notification not shown"
+  adb shell monkey -p $WEB -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  sleep 4; adb shell input tap $WP1; sleep 6; adb shell input tap $WP2; sleep 2
+  for _ in 1 2 3 4 5 6 7 8; do adb shell input swipe $SWIPE; sleep 1; done
+  adb shell input tap $WP3; sleep 2; shot "web_recorded_end"
+  adb shell am start -n "$PKG/io.github.vibhor1102.macrion.recorder.RecorderActionActivity" -a io.github.vibhor1102.macrion.recorder.STOP | tee -a "$RESULT"
+  sleep 5; dump "web_after_save"
+  if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(add automatically|add|add to home screen)$"); then adb shell input tap $pos; sleep 2; fi
+  WID=$(adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select max(id) from scenario_table;'" | tr -d '\r')
+  [ "$WID" != "$ID" ] || fail "the web recording was not saved"
+  log "web scenario $WID actions:"
+  adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select a.name from action_table a join event_table e on a.eventId=e.id where e.scenario_id=$WID order by a.priority;'" | tee -a "$RESULT"
+  echo "--- web recorder logcat"
+  adb logcat -d | grep -E " TapRecorder" | tail -30
+
+  # Play it back.
+  adb shell am force-stop $WEB
+  adb shell input keyevent KEYCODE_HOME; sleep 3
+  adb shell am start -n "$PKG/$LAUNCHER_ACTIVITY" --el "$EXTRA_ID" "$WID" | tee -a "$RESULT"
+  sleep 4; shot "web_play_start"
+  focused_window | grep -qiE "mediaprojection" && fail "[web] the 'share your screen' dialog showed up"
+  sleep 35
+  TOP=$(top_package); log "[web] app on screen after playback: $TOP"
+  dump "web_play_end"
+  [ "$TOP" = "$WEB" ] || fail "[web] playback opened '$TOP' instead of '$WEB'"
+  python3 "$HERE/ui.py" has "$LAST" "^ordered: iced americano$" || fail "[web] playback did not order the iced americano"
+  echo "--- web playback logcat"
+  adb logcat -d | grep -E " (ElementTap[A-Za-z]*|ServiceActionExecutor)" | tail -30
+  log "[web] OK: ordered by the playback"
+fi
 
 adb logcat -d > "$OUT/logcat.txt"
 log "PASS"

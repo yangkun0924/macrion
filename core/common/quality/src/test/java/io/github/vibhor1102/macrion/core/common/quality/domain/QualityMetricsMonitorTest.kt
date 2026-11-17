@@ -52,7 +52,7 @@ class QualityMetricsMonitorTest {
 
     @Test
     fun `startingQualityMetrics is replayed to subscribers arriving after the first read`() = testScope.runTest {
-        val monitor = QualityMetricsMonitor(mockQualityDataSource, testDispatcher)
+        val monitor = QualityMetricsMonitor(mockk(relaxed = true), mockQualityDataSource, testDispatcher)
         // Let the eager sharing consume the data source before anyone subscribes.
         advanceUntilIdle()
 
@@ -63,7 +63,7 @@ class QualityMetricsMonitorTest {
 
     @Test
     fun `startingQualityMetrics keeps the first value when metrics are updated`() = testScope.runTest {
-        val monitor = QualityMetricsMonitor(mockQualityDataSource, testDispatcher)
+        val monitor = QualityMetricsMonitor(mockk(relaxed = true), mockQualityDataSource, testDispatcher)
         advanceUntilIdle()
 
         qualityMetricsFlow.value = METRICS_UPDATED

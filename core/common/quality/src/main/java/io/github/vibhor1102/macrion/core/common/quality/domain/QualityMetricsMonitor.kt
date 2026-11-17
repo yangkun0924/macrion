@@ -16,7 +16,11 @@
  */
 package io.github.vibhor1102.macrion.core.common.quality.domain
 
+import android.content.Context
+import android.os.SystemClock
 import android.util.Log
+
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 import io.github.vibhor1102.macrion.core.base.di.Dispatcher
 import io.github.vibhor1102.macrion.core.base.di.HiltCoroutineDispatchers
@@ -38,6 +42,7 @@ import javax.inject.Singleton
 
 @Singleton
 class QualityMetricsMonitor @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val qualityDataSource: QualityDataSource,
     @Dispatcher(HiltCoroutineDispatchers.IO) ioDispatcher: CoroutineDispatcher,
 ) {
@@ -58,7 +63,8 @@ class QualityMetricsMonitor @Inject constructor(
 
                 var newLossCount = currentMetrics.accessibilityLossCount
                 if (currentMetrics.lastServiceStartTimeMs != INVALID_TIME
-                    && currentMetrics.lastScenarioStartTimeMs == INVALID_TIME) {
+                    && currentMetrics.lastScenarioStartTimeMs == INVALID_TIME
+                    && !isExpectedRestart(currentMetrics.lastServiceStartTimeMs)) {
                     newLossCount += 1
                 }
 
@@ -68,6 +74,22 @@ class QualityMetricsMonitor @Inject constructor(
                 )
             }
         }
+    }
+
+    /**
+     * Installing an update of the app or rebooting the device also stops the accessibility service: this is not the
+     * device killing the app, and must not show the troubleshooting dialog.
+     */
+    private fun isExpectedRestart(lastServiceStartTimeMs: Long): Boolean {
+        val bootTimeMs = System.currentTimeMillis() - SystemClock.elapsedRealtime()
+        val updateTimeMs = try {
+            context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
+        } catch (ex: Exception) {
+            0L
+        }
+        val expected = bootTimeMs > lastServiceStartTimeMs || updateTimeMs > lastServiceStartTimeMs
+        if (expected) Log.i(TAG, "Accessibility service restarted after an app update or a reboot, not counted as a loss")
+        return expected
     }
 
     fun onServiceForegroundStart() {

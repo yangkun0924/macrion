@@ -60,3 +60,9 @@ include(":feature:smart-debugging")
 include(":feature:tutorial")
 
 include(":smartautoclicker")
+
+// Small app with a web page menu, only built for the end to end test.
+if (providers.gradleProperty("macrionE2eApp").isPresent) {
+    include(":e2e-webapp")
+    project(":e2e-webapp").projectDir = file("ci/e2e/webapp")
+}

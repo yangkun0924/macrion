@@ -126,7 +126,12 @@ internal class AndroidActionExecutorImpl @Inject constructor(
     }
 
     override suspend fun tapElement(kind: ElementSelectorKind, value: String, timeoutMs: Long): Boolean {
-        val deadline = System.currentTimeMillis() + timeoutMs.coerceAtLeast(0L)
+        val startMs = System.currentTimeMillis()
+        val deadline = startMs + timeoutMs.coerceAtLeast(0L)
+        // true: scrolling down, false: scrolling back up, null: done scrolling.
+        var scrollDirection: Boolean? = true
+        // Start of the wait for the element in the app itself, after a fingerprint prompt for example.
+        var waitStartMs = startMs
         while (true) {
             currentCoroutineContext().ensureActive()
             val service = accessibilityService ?: return false
@@ -145,12 +150,34 @@ internal class AndroidActionExecutorImpl @Inject constructor(
                     )
                     return true
                 }
+                ElementLookup.ScrolledTo -> {
+                    if (System.currentTimeMillis() >= deadline) {
+                        Log.i(TAG, "Element still out of the screen at timeout: $kind '$value'")
+                        return false
+                    }
+                    delay(ELEMENT_SCROLL_SETTLE_MS)
+                    continue
+                }
                 ElementLookup.NotFound -> Unit
             }
 
             if (System.currentTimeMillis() >= deadline) {
                 Log.i(TAG, "Element not found before timeout: $kind '$value'")
                 return false
+            }
+
+            // Not on the screen after a while: it may be lower in a list or a web page. Scroll down page by page, then
+            // back up once the bottom is reached, like the user would.
+            val appInFront = withContext(Dispatchers.Main.immediate) { elementTapExecutor.isAppInFront(service) }
+            if (!appInFront) waitStartMs = System.currentTimeMillis()
+            if (appInFront && scrollDirection != null && System.currentTimeMillis() - waitStartMs >= ELEMENT_SCROLL_SEARCH_AFTER_MS) {
+                val forward = scrollDirection == true
+                val scrolled = withContext(Dispatchers.Main.immediate) { elementTapExecutor.scrollScreen(service, forward) }
+                if (scrolled) {
+                    delay(ELEMENT_SCROLL_SETTLE_MS)
+                    continue
+                }
+                scrollDirection = if (forward) false else null
             }
             delay(ELEMENT_POLL_INTERVAL_MS)
         }
@@ -216,3 +243,5 @@ private const val TAG = "ServiceActionExecutor"
 
 private const val ELEMENT_POLL_INTERVAL_MS = 250L
 private const val ELEMENT_TAP_DURATION_MS = 50L
+private const val ELEMENT_SCROLL_SEARCH_AFTER_MS = 1_500L
+private const val ELEMENT_SCROLL_SETTLE_MS = 600L

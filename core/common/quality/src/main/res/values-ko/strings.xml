@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="dialog_title_permission_issue">문제 해결</string>
-    <string name="message_accessibility_issues">접근성 서비스 권한이 여러 번 해제된 것 같아요. 직접 끈 게 아니라면 기기가 해제한 거예요.\n\n일부 안드로이드 제조사는 백그라운드 앱에 대한 표준 동작을 따르지 않아서, 기기 브랜드에 따라 추가 설정이 필요할 수 있어요.\n\n아래 웹사이트에서 이 문제와 권한을 안정적으로 유지하는 방법을 확인하세요.</string>
+    <string name="message_accessibility_issues">접근성 서비스가 여러 번 꺼진 것 같아요. 직접 끈 게 아니라면 휴대폰이 배터리를 아끼려고 끈 거예요.\n\n삼성 휴대폰이라면 이렇게 해주세요.\n1. 설정 → 애플리케이션 → Macrion → 배터리 → \"제한 없음\" 선택\n2. 설정 → 배터리 → 백그라운드 사용 제한 → \"사용하지 않는 앱을 절전 상태로 전환\" 끄기\n3. 같은 화면의 \"절전 예외 앱\"에 Macrion 추가\n\n다른 제조사 휴대폰은 아래 버튼에서 방법을 볼 수 있어요.</string>
+    <string name="button_open_dont_kill_my_app">기종별 해결 방법 보기</string>
 </resources>
