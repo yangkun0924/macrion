@@ -22,18 +22,18 @@
         <item quantity="other">오류 %1$d개</item>
     </plurals>
     <string name="message_backup_import_error">오류가 생겨 백업 가져오기를 취소했어요</string>
-    <string name="message_backup_import_malformed">이 백업이 손상됐거나 터치마스터와 Klick’r 백업 형식이 섞여 있어요.</string>
-    <string name="message_backup_klickr_compatibility_loss">Klick’r에서 가져올 수 있도록 터치마스터 전용 기능은 이 백업에서 빠져요.</string>
+    <string name="message_backup_import_malformed">이 백업이 손상됐거나 TouchMaster와 Klick’r 백업 형식이 섞여 있어요.</string>
+    <string name="message_backup_klickr_compatibility_loss">Klick’r에서 가져올 수 있도록 TouchMaster 전용 기능은 이 백업에서 빠져요.</string>
     <string name="message_backup_klickr_compatibility_analysis">선택한 시나리오의 Klick’r 호환성을 확인하는 중…</string>
-    <string name="message_backup_klickr_compatibility_review_without_loss">호환 대상: %1$s\n\n빼야 할 터치마스터 전용 구성 요소가 없어요. 계속해서 백업 저장 위치를 고르세요.</string>
+    <string name="message_backup_klickr_compatibility_review_without_loss">호환 대상: %1$s\n\n빼야 할 TouchMaster 전용 구성 요소가 없어요. 계속해서 백업 저장 위치를 고르세요.</string>
     <string name="message_backup_klickr_compatibility_review">호환 대상: %1$s\n\n빠지는 구성 요소: %2$d개\n내보낼 수 없는 시나리오: %3$d개\n\n계속해서 저장 위치를 고르거나, 파일을 만들지 않고 취소하세요.</string>
-    <string name="message_backup_klickr_curved_swipes_excluded">곡선 스와이프 %1$d개 제외됨. 전체 경로를 유지하려면 터치마스터 기본 백업을 쓰세요.</string>
-    <string name="message_backup_create_klickr_compatible_completed">Klick’r 호환 백업 완료. 빠진 터치마스터 전용 구성 요소: %1$d개.</string>
-    <string name="message_backup_create_klickr_compatible_completed_without_loss">Klick’r 호환 백업 완료. 빠진 터치마스터 전용 기능은 없어요.</string>
+    <string name="message_backup_klickr_curved_swipes_excluded">곡선 스와이프 %1$d개 제외됨. 전체 경로를 유지하려면 TouchMaster 기본 백업을 쓰세요.</string>
+    <string name="message_backup_create_klickr_compatible_completed">Klick’r 호환 백업 완료. 빠진 TouchMaster 전용 구성 요소: %1$d개.</string>
+    <string name="message_backup_create_klickr_compatible_completed_without_loss">Klick’r 호환 백업 완료. 빠진 TouchMaster 전용 기능은 없어요.</string>
     <string name="message_backup_import_compatibility">가져온 시나리오 중 일부는 화면이 다른 기기에서 만들어져서 감지와 액션 좌표에 문제가 생길 수 있어요.\n\n고치려면 조건 스크린샷을 새로 찍고 클릭/스와이프 위치를 다시 지정하세요.</string>
     <string name="message_backup_error_no_zip_app">zip 파일을 저장하거나 불러올 앱이 기기에 없어요.</string>
     <string name="content_desc_backup_state">백업 상태</string>
-    <string name="message_backup_import_unsupported_schema">이 터치마스터 버전이 안전하게 가져올 수 없는 시나리오 형식이에요. 아무것도 가져오지 않았어요. 원본 백업을 보관하세요.</string>
+    <string name="message_backup_import_unsupported_schema">이 TouchMaster 버전이 안전하게 가져올 수 없는 시나리오 형식이에요. 아무것도 가져오지 않았어요. 원본 백업을 보관하세요.</string>
     <string name="message_backup_import_analysis">백업 호환성 확인 중…</string>
     <string name="message_backup_import_incompatible">완전히 호환되지 않는 백업이에요. 아무것도 가져오지 않았어요. 부분 복구를 검토할 수 있어요.</string>
     <string name="message_backup_partial_review">호환되는 데이터만 가져와요. 지원하지 않는 액션은 빠지고, 지원하지 않는 조건이 있는 이벤트는 통째로 빠져요. 원본 백업을 보관하고, 복구한 시나리오는 실행 전에 확인하세요.</string>
