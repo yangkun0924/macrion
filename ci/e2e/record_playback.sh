@@ -304,6 +304,7 @@ if [ -n "$WEB_APK" ]; then
   # Last swipe is a quick flick and the tap comes right after it, while the page may still be moving: the recorder
   # must record the item really tapped.
   adb shell input swipe $((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 4)) 120
+  sleep 0.7 # a finger needs about that long to come back down
   adb shell input tap $WP3; sleep 4; shot "web_recorded_end"
   adb shell am start -n "$PKG/io.github.vibhor1102.macrion.recorder.RecorderActionActivity" -a io.github.vibhor1102.macrion.recorder.STOP | tee -a "$RESULT"
   sleep 5; dump "web_after_save"
