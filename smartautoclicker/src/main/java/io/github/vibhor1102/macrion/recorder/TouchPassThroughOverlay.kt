@@ -63,8 +63,14 @@ internal class TouchPassThroughOverlay(
             title = "MacrionTouchRecorder"
         }
 
-        val newView = View(service).apply {
-            setOnTouchListener { _, event -> onTouchEvent(event); true }
+        val newView = object : View(service) {
+            override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+                onTouchEvent(event)
+                return true
+            }
+        }.apply {
+            // Some devices don't give touches to a window that never drew anything.
+            setBackgroundColor(0x01000000)
         }
         return try {
             windowManager.addView(newView, params)

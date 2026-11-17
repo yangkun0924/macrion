@@ -117,6 +117,9 @@ adb shell input tap $REC
 sleep 3; shot "recording_started"
 adb shell dumpsys notification --noredact | grep -q "Recording your taps" || fail "recording notification not shown"
 log "recording notification shown"
+echo "--- touch recorder window"
+adb shell dumpsys window windows | grep -A12 "MacrionTouchRecorder" | head -30
+adb shell dumpsys input | grep -A12 "MacrionTouchRecorder" | head -30
 
 # 3. A decoy app window shows up first (like Samsung Pass), then the real taps in Settings.
 if [ -n "$DECOY" ]; then
