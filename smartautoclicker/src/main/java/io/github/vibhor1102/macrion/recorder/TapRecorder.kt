@@ -87,6 +87,7 @@ object TapRecorder {
     private val warmUp = object : Runnable {
         override fun run() {
             if (!_isRecording.value) return
+            updateTouchCapture()
             warmUpScreenContent()
             warmUpHandler.postDelayed(this, WARM_UP_PERIOD_MS)
         }
@@ -157,6 +158,7 @@ object TapRecorder {
         if (!_isRecording.value || event == null) return
         val pkg = event.packageName?.toString() ?: return
         Log.d(TAG, "Event ${AccessibilityEvent.eventTypeToString(event.eventType)} from $pkg")
+        if (observingTouches && event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) updateTouchCapture()
         if (pkg in ignoredPackages || pkg.isSystemOverlayPackage()) return
 
         // The touches give the taps and swipes when they are observed, the click and scroll events would repeat them.
@@ -256,6 +258,25 @@ object TapRecorder {
         // Without a text or an id to find the element again, the touched point itself is played.
         val step = node?.toStep("")?.takeIf { it is Step.Element } ?: Step.Position(x, y)
         return TouchTarget(pkg, step)
+    }
+
+    /**
+     * The touches are only taken (and replayed) in the apps to record. In front of a fingerprint or PIN prompt, a
+     * system window or the home screen, the user's real touches go through untouched.
+     */
+    private fun updateTouchCapture() {
+        val overlay = touchOverlay ?: return
+        val service = serviceRef?.get() ?: return
+        val focused = try {
+            service.windows?.firstOrNull { it.isFocused && it.type != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY }
+        } catch (_: Exception) {
+            null
+        }
+        if (focused == null) return
+        val pkg = focused.root?.packageName?.toString()
+        val recordable = focused.type == AccessibilityWindowInfo.TYPE_APPLICATION &&
+            (pkg == null || (pkg !in ignoredPackages && !pkg.isSystemOverlayPackage()))
+        overlay.setCapturing(recordable)
     }
 
     /**

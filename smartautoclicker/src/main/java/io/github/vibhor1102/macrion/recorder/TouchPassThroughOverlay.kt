@@ -35,6 +35,18 @@ internal class TouchPassThroughOverlay(
     private val points = mutableListOf<Triple<Float, Float, Long>>()
     private var forwarding = false
     private var replayCameBack = false
+    private var capturing = true
+
+    /**
+     * Stop or start taking the touches. Stopped while a system window is in front (fingerprint or PIN prompt, lock
+     * screen...) or on the home screen: these get the real touches of the user, nothing is recorded there.
+     */
+    fun setCapturing(enabled: Boolean) {
+        if (capturing == enabled) return
+        capturing = enabled
+        Log.d(TAG, "Taking the touches: $enabled")
+        if (!forwarding) setTouchable(enabled)
+    }
 
     /** @return false if the window can't be shown. */
     @SuppressLint("ClickableViewAccessibility")
@@ -187,7 +199,7 @@ internal class TouchPassThroughOverlay(
         // Let the app handle the end of the gesture before taking the touches again.
         handler.postDelayed({
             forwarding = false
-            setTouchable(true)
+            setTouchable(capturing)
         }, RESTORE_DELAY_MS)
     }
 

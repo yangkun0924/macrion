@@ -129,12 +129,6 @@ log "recording notification shown"
 echo "--- touch recorder window"
 adb shell dumpsys window windows | grep -A12 "MacrionTouchRecorder" | head -30
 adb shell dumpsys input | grep -A12 "MacrionTouchRecorder" | head -30
-# Probe: one tap on the home screen wallpaper must reach the recorder window.
-adb logcat -c
-adb shell input tap 20 200; sleep 2
-echo "--- probe tap logcat"
-adb logcat -d | grep -E "TouchPassThroughOverlay|TapRecorder|ViewRootImpl|InputDispatcher|Dropping|AccessibilityInputFilter|WindowManager: " | tail -40
-adb logcat -d | grep -q "dispatchTouchEvent down" || { adb logcat -d | tail -80; fail "the recorder window did not get the probe tap"; }
 
 # 3. A decoy app window shows up first (like Samsung Pass), then the real taps in Settings.
 if [ -n "$DECOY" ]; then
