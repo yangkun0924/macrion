@@ -376,6 +376,9 @@ object TapRecorder {
      */
     private fun AccessibilityNodeInfo.uniqueTextStep(root: AccessibilityNodeInfo, screenHeight: Int): Step.Element? {
         val counts = root.textCounts()
+        // A price or a number is never used while the row or card has a name: the same price is often shown for other
+        // items, and web pages don't always describe the items out of the screen (the count can miss them).
+        var nameInItem: String? = null
         var scope: AccessibilityNodeInfo? = this
         var depth = 0
         while (depth < UNIQUE_TEXT_MAX_CLIMB) {
@@ -383,13 +386,23 @@ object TapRecorder {
             val bounds = Rect().also(current::getBoundsInScreen)
             if (bounds.height() > screenHeight * MAX_ITEM_SCREEN_RATIO) break
             val local = current.textCounts()
-            current.orderedTexts().firstOrNull { text -> counts[text.lowercase()] == local[text.lowercase()] }?.let { text ->
+            val names = current.orderedTexts().filterNot { it.isValueLike() }
+            names.firstOrNull { text -> counts[text.lowercase()] == local[text.lowercase()] }?.let { text ->
                 return Step.Element(TapElement.SelectorType.TEXT_EXACT, text, text)
             }
+            if (nameInItem == null) nameInItem = names.firstOrNull()
             scope = current.parent
             depth++
         }
-        return null
+        return nameInItem?.let { Step.Element(TapElement.SelectorType.TEXT_EXACT, it, it) }
+    }
+
+    /** "1,500원", "2,000 won", "$3.50", "12": a value shown for many items rather than a name. */
+    private fun String.isValueLike(): Boolean {
+        val digits = count { it.isDigit() }
+        if (digits == 0) return false
+        val letters = filter { it.isLetter() }.lowercase()
+        return letters.isEmpty() || letters in VALUE_UNITS || digits * 2 >= length - count { it.isWhitespace() }
     }
 
     /** How many elements show each text (or description), as the playback compares them. */
@@ -787,6 +800,7 @@ private const val NAME_MAX_LENGTH = 50
 private const val CHILD_TEXT_MAX_DEPTH = 4
 private const val CLICK_AFTER_TAP_MS = 1_500L
 private const val UNIQUE_TEXT_MAX_CLIMB = 8
+private val VALUE_UNITS = setOf("원", "won", "krw", "usd", "kcal", "ml", "g", "개", "잔", "p", "pt", "점")
 private const val MAX_ITEM_SCREEN_RATIO = 0.3f
 private const val WALK_MAX_NODES = 4_000
 private const val RECORDED_TAP_TIMEOUT_MS = 10_000L
