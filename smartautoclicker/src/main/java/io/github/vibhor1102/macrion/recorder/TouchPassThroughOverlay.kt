@@ -34,6 +34,7 @@ internal class TouchPassThroughOverlay(
 
     private val points = mutableListOf<Triple<Float, Float, Long>>()
     private var forwarding = false
+    private var replayCameBack = false
 
     /** @return false if the window can't be shown. */
     @SuppressLint("ClickableViewAccessibility")
@@ -106,7 +107,11 @@ internal class TouchPassThroughOverlay(
         if (event.actionMasked != MotionEvent.ACTION_MOVE) {
             Log.d(TAG, "Touch ${MotionEvent.actionToString(event.actionMasked)} at ${event.rawX},${event.rawY} forwarding=$forwarding")
         }
-        if (forwarding) return
+        if (forwarding) {
+            // The replayed touch came back here: the window was still taking the touches.
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) replayCameBack = true
+            return
+        }
         // Only the first finger is replayed.
         onTouch(event)
         when (event.actionMasked) {
@@ -144,8 +149,22 @@ internal class TouchPassThroughOverlay(
 
         setTouchable(false)
         forwarding = true
+        // The window stops taking the touches a little after it is asked to.
+        handler.postDelayed({ replay(path, duration, attempt = 1) }, PASS_THROUGH_DELAY_MS)
+    }
+
+    private fun replay(path: Path, duration: Long, attempt: Int) {
+        if (view == null) return
+        replayCameBack = false
         val callback = object : AccessibilityService.GestureResultCallback() {
-            override fun onCompleted(gestureDescription: GestureDescription?) = done()
+            override fun onCompleted(gestureDescription: GestureDescription?) {
+                if (replayCameBack && attempt < MAX_REPLAY_ATTEMPTS) {
+                    Log.d(TAG, "Replayed touch came back to the recorder window, trying again")
+                    handler.postDelayed({ replay(path, duration, attempt + 1) }, PASS_THROUGH_DELAY_MS * attempt)
+                } else {
+                    done()
+                }
+            }
             override fun onCancelled(gestureDescription: GestureDescription?) {
                 Log.w(TAG, "Replayed touch cancelled")
                 done()
@@ -160,7 +179,7 @@ internal class TouchPassThroughOverlay(
             Log.w(TAG, "Can't replay the touch", ex)
             false
         }
-        Log.d(TAG, "Replaying ${gesture.size} points over $duration ms: $dispatched")
+        Log.d(TAG, "Replaying the touch over $duration ms (attempt $attempt): $dispatched")
         if (!dispatched) done()
     }
 
@@ -198,3 +217,5 @@ private const val MAX_PATH_POINTS = 60
 private const val MIN_DURATION_MS = 40L
 private const val MAX_DURATION_MS = 10_000L
 private const val RESTORE_DELAY_MS = 120L
+private const val PASS_THROUGH_DELAY_MS = 150L
+private const val MAX_REPLAY_ATTEMPTS = 4
