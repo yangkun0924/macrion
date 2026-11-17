@@ -29,7 +29,7 @@
     <string name="message_empty_dumb_action_list">만든 액션이 없어요!</string>
     <string name="message_empty_secondary_dumb_action_list">시나리오를 실행하려면 액션이 하나 이상 필요해요</string>
     <string name="message_dumb_brief_empty_action_list">시나리오를 실행하려면 액션이 하나 이상 필요해요</string>
-    <string name="dialog_stop_confirmation_title">TouchMaster를 멈출까요?</string>
+    <string name="dialog_stop_confirmation_title">터치터치를 멈출까요?</string>
     <string name="dialog_stop_confirmation_message">현재 시나리오가 멈춰요.</string>
     <string name="dialog_stop_confirmation_stop">멈추기</string>
     <string name="list_header_copy_dumb_action_this">이 시나리오의 액션</string>

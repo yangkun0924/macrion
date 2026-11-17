@@ -10,9 +10,9 @@
     <string name="item_title_try_element">%1$s 테스트</string>
     <string name="item_error_action_invalid_generic">올바르지 않은 액션이에요</string>
     <string name="message_empty_copy">복사할 항목이 없어요</string>
-    <string name="message_tutorial_volume_down_stop">시나리오가 너무 빠르게 클릭하면 TouchMaster 메뉴로 멈출 수 없을 수도 있어요.\n\n그럴 땐 기기의 \"볼륨 낮추기\" 버튼을 누르면 실행 중인 시나리오가 멈춰요.</string>
+    <string name="message_tutorial_volume_down_stop">시나리오가 너무 빠르게 클릭하면 터치터치 메뉴로 멈출 수 없을 수도 있어요.\n\n그럴 땐 기기의 \"볼륨 낮추기\" 버튼을 누르면 실행 중인 시나리오가 멈춰요.</string>
     <string name="message_dont_show_again">다시 보지 않기</string>
-    <string name="message_error_screen_capture_permission_dialog_not_found">이 기기에는 표준 안드로이드 화면 캡처 권한 창이 없어서 TouchMaster를 실행할 수 없어요.</string>
+    <string name="message_error_screen_capture_permission_dialog_not_found">이 기기에는 표준 안드로이드 화면 캡처 권한 창이 없어서 터치터치를 실행할 수 없어요.</string>
     <string name="button_understood">알겠어요</string>
     <string name="input_field_label_anti_detection">탐지 방지</string>
     <string name="input_field_label_click_press_duration">누르는 시간 (ms)</string>
@@ -52,7 +52,7 @@
     <string name="content_desc_drag_and_drop">끌어서 순서 바꾸기</string>
     <string name="content_desc_move_menu">떠 있는 메뉴 이동</string>
     <string name="content_desc_play_pause_scenario">시나리오 실행 또는 일시 정지</string>
-    <string name="content_desc_stop_clicker">TouchMaster 멈추기</string>
+    <string name="content_desc_stop_clicker">터치터치 멈추기</string>
     <string name="content_desc_confirm">확인</string>
     <string name="content_desc_go_back">대화상자로 돌아가기</string>
     <string name="content_desc_tuck_toolbar">툴바를 화면 가장자리로 숨기기</string>
