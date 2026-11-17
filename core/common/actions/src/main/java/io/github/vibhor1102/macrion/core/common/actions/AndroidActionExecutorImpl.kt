@@ -132,6 +132,7 @@ internal class AndroidActionExecutorImpl @Inject constructor(
         var scrollDirection: Boolean? = true
         // Start of the wait for the element in the app itself, after a fingerprint prompt for example.
         var waitStartMs = startMs
+        var lastTapAt: ElementLookup.TapAt? = null
         while (true) {
             currentCoroutineContext().ensureActive()
             val service = accessibilityService ?: return false
@@ -142,6 +143,17 @@ internal class AndroidActionExecutorImpl @Inject constructor(
             when (lookup) {
                 ElementLookup.Clicked -> return true
                 is ElementLookup.TapAt -> {
+                    // A page still moving (end of a scroll) gives another position on the next look: tap once it
+                    // stays in place.
+                    val previous = lastTapAt
+                    lastTapAt = lookup
+                    val moved = previous == null ||
+                        kotlin.math.abs(previous.x - lookup.x) > ELEMENT_STILL_SLOP_PX ||
+                        kotlin.math.abs(previous.y - lookup.y) > ELEMENT_STILL_SLOP_PX
+                    if (moved && System.currentTimeMillis() < deadline) {
+                        delay(ELEMENT_STILL_CHECK_MS)
+                        continue
+                    }
                     val path = Path().apply { moveTo(lookup.x, lookup.y) }
                     dispatchGesture(
                         GestureDescription.Builder()
@@ -245,3 +257,5 @@ private const val ELEMENT_POLL_INTERVAL_MS = 250L
 private const val ELEMENT_TAP_DURATION_MS = 50L
 private const val ELEMENT_SCROLL_SEARCH_AFTER_MS = 1_500L
 private const val ELEMENT_SCROLL_SETTLE_MS = 600L
+private const val ELEMENT_STILL_CHECK_MS = 200L
+private const val ELEMENT_STILL_SLOP_PX = 8f

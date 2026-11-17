@@ -4,6 +4,7 @@
 usage:
   ui.py find <dump.xml> <regex>   prints "x y" of the first node whose text or content-desc matches (case insensitive)
   ui.py has  <dump.xml> <regex>   exit 0 if a node matches, 1 otherwise
+  ui.py below <dump.xml> <regex> <y>  prints "x y" of the matching node closest below the height y
   ui.py texts <dump.xml>          prints every non empty text / content-desc, for the logs
 """
 import re
@@ -42,6 +43,13 @@ if cmd == "find":
     if n is None:
         sys.exit(1)
     print(*center(n))
+elif cmd == "below":
+    rx, y = re.compile(sys.argv[3], re.I), int(sys.argv[4])
+    found = [center(n) for n in nodes(path) if any(rx.search(t) for t in label(n) if t)]
+    found = sorted((c for c in found if c[1] > y), key=lambda c: c[1])
+    if not found:
+        sys.exit(1)
+    print(*found[0])
 elif cmd == "has":
     sys.exit(0 if find(path, sys.argv[3]) is not None else 1)
 elif cmd == "texts":

@@ -59,6 +59,7 @@ import io.github.vibhor1102.macrion.core.ui.compose.MacrionDialogSurface
 import io.github.vibhor1102.macrion.core.ui.compose.MacrionTheme
 import io.github.vibhor1102.macrion.crash.CrashReportFlow
 import io.github.vibhor1102.macrion.feature.backup.ui.BackupDialog
+import io.github.vibhor1102.macrion.feature.externallaunch.shortcut.ScenarioShortcuts
 import io.github.vibhor1102.macrion.feature.backup.ui.BackupViewModel
 import io.github.vibhor1102.macrion.scenarios.creation.ScenarioCreationSheet
 import io.github.vibhor1102.macrion.scenarios.creation.ScenarioCreationViewModel
@@ -315,6 +316,25 @@ class ScenarioListHost(
         uiState ?: return
 
         this.uiState = uiState
+        syncShortcutNames(uiState)
+    }
+
+    private var syncedShortcutNames: List<Triple<Long, String, Boolean>> = emptyList()
+
+    /** A scenario renamed in the editor: its home screen shortcut takes the new name. */
+    private fun syncShortcutNames(uiState: ScenarioListUiState) {
+        val names = uiState.listContent.mapNotNull { item ->
+            when (item) {
+                is ScenarioListUiState.Item.ScenarioItem.Valid.Smart -> Triple(item.scenario.id.databaseId, item.scenario.name, false)
+                is ScenarioListUiState.Item.ScenarioItem.Valid.Dumb -> Triple(item.scenario.id.databaseId, item.scenario.name, true)
+                is ScenarioListUiState.Item.ScenarioItem.Empty.Smart -> Triple(item.scenario.id.databaseId, item.scenario.name, false)
+                is ScenarioListUiState.Item.ScenarioItem.Empty.Dumb -> Triple(item.scenario.id.databaseId, item.scenario.name, true)
+                else -> null
+            }
+        }
+        if (names == syncedShortcutNames) return
+        syncedShortcutNames = names
+        ScenarioShortcuts.syncNames(activity, names)
     }
 
     private fun onConditionMigrationRequired(isRequired: Boolean) {

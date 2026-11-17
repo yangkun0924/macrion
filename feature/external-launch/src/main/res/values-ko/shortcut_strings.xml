@@ -4,4 +4,5 @@
     <string name="toast_shortcut_not_supported">사용 중인 런처가 홈 화면 바로가기를 지원하지 않아요</string>
     <string name="toast_shortcut_scenario_not_found">시나리오가 삭제됐어요. 바로가기를 지우고 다시 만들어 주세요.</string>
     <string name="action_add_home_shortcut">홈 화면에 추가</string>
+    <string name="toast_shortcut_renamed">홈 화면 바로가기 이름을 바꿨어요</string>
 </resources>

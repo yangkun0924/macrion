@@ -1,27 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed (one color) version of the coffee cup icon. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="512"
-    android:viewportHeight="512">
-    <group
-        android:pivotX="256"
-        android:pivotY="256"
-        android:scaleX="0.6"
-        android:scaleY="0.6">
+    android:viewportWidth="108"
+    android:viewportHeight="108">
     <path
-        android:fillColor="@android:color/transparent"
-        android:pathData="M160.75,88H127.75C106.15,88 88.75,105.4 88.75,127V160 M351.25,88H384.25C405.85,88 423.25,105.4 423.25,127V160 M160.75,424H127.75C106.15,424 88.75,406.6 88.75,385V352 M351.25,424H384.25C405.85,424 423.25,406.6 423.25,385V352"
-        android:strokeColor="@android:color/black"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3.2"
         android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="30" />
+        android:pathData="M44,39 C41,35.5 47,33.5 44,29 M52,39 C49,35.5 55,33.5 52,29 M60,39 C57,35.5 63,33.5 60,29" />
     <path
-        android:fillColor="@android:color/transparent"
-        android:pathData="M256,162.25A93.75,93.75 0,1 1,256,349.75A93.75,93.75 0,1 1,256,162.25"
-        android:strokeColor="@android:color/black"
-        android:strokeWidth="36" />
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4.5"
+        android:pathData="M70,50.5 H74.5 A5.75,5.75 0 0 1 74.5,62 H69.5" />
     <path
-        android:fillColor="@android:color/black"
-        android:pathData="M256,223A33,33 0,1 1,256,289A33,33 0,1 1,256,223" />
-    </group>
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M32,73.5 H76 A3,3 0 0 1 76,79.5 H32 A3,3 0 0 1 32,73.5 Z M33,46 V56 C33,65 40,72 49,72 H55 C64,72 71,65 71,56 V46 Z M33,46 A19,4.2 0 1 0 71,46 A19,4.2 0 1 0 33,46 Z" />
 </vector>

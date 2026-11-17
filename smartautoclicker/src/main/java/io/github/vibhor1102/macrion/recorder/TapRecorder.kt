@@ -99,8 +99,15 @@ object TapRecorder {
         var multiTouch = false
     }
 
-    /** What is under a finger when it touches the screen: the app, and how to find the element again. */
-    private class TouchTarget(val pkg: String, val step: Step)
+    /**
+     * What is under a finger when it touches the screen: the app, how to find the element again, and the element
+     * itself (to check it against the click reported by the app).
+     */
+    private class TouchTarget(val pkg: String, val step: Step, val node: AccessibilityNodeInfo?)
+
+    /** The last tap recorded, until the app reports which element it really clicked. */
+    private class PendingTap(val index: Int, val step: Step, val pkg: String, val node: AccessibilityNodeInfo?, val timeMs: Long)
+    private var pendingTap: PendingTap? = null
 
     /** Called by the accessibility service once connected. */
     fun attach(service: AccessibilityService, smartRepository: IRepository) {
@@ -163,7 +170,11 @@ object TapRecorder {
         if (pkg in ignoredPackages || pkg.isSystemOverlayPackage()) return
 
         // The touches give the taps and swipes when they are observed, the click and scroll events would repeat them.
-        if (observingTouches) return
+        // A click still tells which element the app really took the tap on.
+        if (observingTouches) {
+            if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) onClickedAfterTap(event, pkg)
+            return
+        }
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
             onScrolled(event, pkg)
             return
@@ -280,8 +291,55 @@ object TapRecorder {
         if (startPackage == null) startPackage = target.pkg
         steps.add(step)
         _stepCount.value = steps.size
+        pendingTap = if (step is Step.Drag) null
+            else PendingTap(steps.lastIndex, step, target.pkg, target.node, SystemClock.uptimeMillis())
         Log.d(TAG, "Recorded $step in ${target.pkg}")
     }
+
+    /**
+     * The app reported the click of the tap just replayed: this is the element it really took the tap on. If it isn't
+     * the one found under the finger (web pages can report their elements a bit away from where they are drawn), the
+     * clicked element replaces it.
+     */
+    private fun onClickedAfterTap(event: AccessibilityEvent, pkg: String) {
+        val pending = pendingTap ?: return
+        if (pkg != pending.pkg || SystemClock.uptimeMillis() - pending.timeMs > CLICK_AFTER_TAP_MS) return
+        if (steps.getOrNull(pending.index) != pending.step) return
+        val clicked = event.source ?: return
+        pendingTap = null
+        if (pending.node != null && clicked.isSameOrAncestorOf(pending.node)) {
+            Log.d(TAG, "Click confirms the recorded ${pending.step}")
+            return
+        }
+        val root = clicked.rootNode() ?: return
+        val corrected = clicked.uniqueTextStep(root, screenHeight()) ?: clicked.toStep(event.text.singleOrNull()?.toString()?.trim().orEmpty())
+        if (corrected !is Step.Element || corrected == pending.step) return
+        Log.i(TAG, "Clicked element differs from the one under the finger: ${pending.step} -> $corrected")
+        steps[pending.index] = corrected
+    }
+
+    private fun AccessibilityNodeInfo.isSameOrAncestorOf(node: AccessibilityNodeInfo): Boolean {
+        var current: AccessibilityNodeInfo? = node
+        var depth = 0
+        while (current != null && depth <= TREE_MAX_DEPTH) {
+            if (current == this) return true
+            current = current.parent
+            depth++
+        }
+        return false
+    }
+
+    private fun AccessibilityNodeInfo.rootNode(): AccessibilityNodeInfo? {
+        var current: AccessibilityNodeInfo = this
+        var depth = 0
+        while (depth <= TREE_MAX_DEPTH) {
+            current = current.parent ?: return current
+            depth++
+        }
+        return null
+    }
+
+    private fun screenHeight(): Int = serviceRef?.get()?.resources?.displayMetrics?.heightPixels ?: 2000
 
     /** The app window under a point and the element there, or null for system windows, keyboards and this app. */
     private fun targetAt(x: Int, y: Int): TouchTarget? {
@@ -302,10 +360,70 @@ object TapRecorder {
             Log.d(TAG, "Touch in $pkg, ignored")
             return null
         }
+        val touched = root.deepestAt(x, y, withSelector = false)
         val node = root.deepestAt(x, y)
-        // Without a text or an id to find the element again, the touched point itself is played.
-        val step = node?.toStep("")?.takeIf { it is Step.Element } ?: Step.Position(x, y)
-        return TouchTarget(pkg, step)
+        // A text found only once on the screen first: the same text elsewhere (a price, a "HOT" label) would be tapped
+        // instead when playing. Then the element itself, and without a text or an id, the touched point.
+        val step = touched?.uniqueTextStep(root, screenHeight())
+            ?: node?.toStep("")?.takeIf { it is Step.Element }
+            ?: Step.Position(x, y)
+        return TouchTarget(pkg, step, touched ?: node)
+    }
+
+    /**
+     * A text identifying the element: from the touched element, then its parents up to the size of a list row or a
+     * card, the first text found nowhere else on the screen.
+     */
+    private fun AccessibilityNodeInfo.uniqueTextStep(root: AccessibilityNodeInfo, screenHeight: Int): Step.Element? {
+        val counts = root.textCounts()
+        var scope: AccessibilityNodeInfo? = this
+        var depth = 0
+        while (depth < UNIQUE_TEXT_MAX_CLIMB) {
+            val current = scope ?: break
+            val bounds = Rect().also(current::getBoundsInScreen)
+            if (bounds.height() > screenHeight * MAX_ITEM_SCREEN_RATIO) break
+            val local = current.textCounts()
+            current.orderedTexts().firstOrNull { text -> counts[text.lowercase()] == local[text.lowercase()] }?.let { text ->
+                return Step.Element(TapElement.SelectorType.TEXT_EXACT, text, text)
+            }
+            scope = current.parent
+            depth++
+        }
+        return null
+    }
+
+    /** How many elements show each text (or description), as the playback compares them. */
+    private fun AccessibilityNodeInfo.textCounts(): Map<String, Int> {
+        val counts = HashMap<String, Int>()
+        walk { node ->
+            node.selectorTexts().map { it.lowercase() }.distinct().forEach { counts[it] = (counts[it] ?: 0) + 1 }
+        }
+        return counts
+    }
+
+    /** The texts of an element and its children, the children (a name, a price...) before the joined text of a row. */
+    private fun AccessibilityNodeInfo.orderedTexts(): List<String> {
+        val leaves = mutableListOf<String>()
+        val others = mutableListOf<String>()
+        walk { node -> (if (node.childCount == 0) leaves else others).addAll(node.selectorTexts()) }
+        return (leaves + others).distinct()
+    }
+
+    private fun AccessibilityNodeInfo.selectorTexts(): List<String> =
+        listOfNotNull(text?.toString()?.trim(), contentDescription?.toString()?.trim()).filter { it.isUsableText() }
+
+    /** Visit the element and its children, in the screen reading order. */
+    private fun AccessibilityNodeInfo.walk(visit: (AccessibilityNodeInfo) -> Unit) {
+        val stack = ArrayDeque<Pair<AccessibilityNodeInfo, Int>>()
+        stack.add(this to 0)
+        var count = 0
+        while (stack.isNotEmpty() && count < WALK_MAX_NODES) {
+            val (node, depth) = stack.removeLast()
+            count++
+            visit(node)
+            if (depth >= TREE_MAX_DEPTH) continue
+            for (i in node.childCount - 1 downTo 0) node.getChild(i)?.let { stack.add(it to depth + 1) }
+        }
     }
 
     /**
@@ -350,8 +468,8 @@ object TapRecorder {
         }
     }
 
-    /** The smallest visible element containing the point. */
-    private fun AccessibilityNodeInfo.deepestAt(x: Int, y: Int): AccessibilityNodeInfo? {
+    /** The smallest visible element containing the point (with a text, id or description to find it by default). */
+    private fun AccessibilityNodeInfo.deepestAt(x: Int, y: Int, withSelector: Boolean = true): AccessibilityNodeInfo? {
         var best: AccessibilityNodeInfo? = null
         var bestArea = Long.MAX_VALUE
         val stack = ArrayDeque<Pair<AccessibilityNodeInfo, Int>>()
@@ -361,7 +479,7 @@ object TapRecorder {
             val bounds = Rect().also(node::getBoundsInScreen)
             if (!node.isVisibleToUser || !bounds.contains(x, y)) continue
             val area = bounds.width().toLong() * bounds.height()
-            if (area <= bestArea && node.hasSelector()) {
+            if (area <= bestArea && (!withSelector || node.hasSelector())) {
                 best = node
                 bestArea = area
             }
@@ -574,6 +692,7 @@ object TapRecorder {
         touchOverlay?.hide()
         touchOverlay = null
         endedTouch = null
+        pendingTap = null
         observingTouches = false
         touchesSeen = false
         touchDown = null
@@ -666,6 +785,10 @@ private const val MIN_SCROLL_VIEW_SIZE = 100
 private const val TEXT_MAX_LENGTH = 40
 private const val NAME_MAX_LENGTH = 50
 private const val CHILD_TEXT_MAX_DEPTH = 4
+private const val CLICK_AFTER_TAP_MS = 1_500L
+private const val UNIQUE_TEXT_MAX_CLIMB = 8
+private const val MAX_ITEM_SCREEN_RATIO = 0.3f
+private const val WALK_MAX_NODES = 4_000
 private const val RECORDED_TAP_TIMEOUT_MS = 10_000L
 private const val FIRST_TAP_TIMEOUT_MS = 30_000L
 private const val START_DELAY_MS = 300L

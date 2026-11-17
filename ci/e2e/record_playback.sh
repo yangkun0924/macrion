@@ -276,6 +276,10 @@ if [ -n "$WEB_APK" ]; then
   for _ in 1 2 3 4 5 6 7 8; do adb shell input swipe $SWIPE; sleep 1; done
   dump "web_find_bottom"
   WP3=$(pos_in "$LAST" "^iced americano$") || fail "web page 'Iced americano' not found at the bottom"
+  # The recording taps the price of the item: the same price is shown for another coffee, the recorder must record
+  # the name of the item instead.
+  WP3_PRICE=$(python3 "$HERE/ui.py" below "$LAST" "^1,500 won$" "${WP3#* }") || fail "price of 'Iced americano' not found"
+  log "Iced americano price at $WP3_PRICE"
   adb shell input tap $WP3; sleep 2; dump "web_expected_end"
   python3 "$HERE/ui.py" has "$LAST" "^ordered: iced americano$" || fail "the web page did not take the order by hand"
   log "web taps: $WP1, $WP2, scroll, $WP3"
@@ -305,7 +309,7 @@ if [ -n "$WEB_APK" ]; then
   # must record the item really tapped.
   adb shell input swipe $((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 4)) 120
   sleep 0.7 # a finger needs about that long to come back down
-  adb shell input tap $WP3; sleep 4; shot "web_recorded_end"
+  adb shell input tap $WP3_PRICE; sleep 4; shot "web_recorded_end"
   adb shell am start -n "$PKG/io.github.vibhor1102.macrion.recorder.RecorderActionActivity" -a io.github.vibhor1102.macrion.recorder.STOP | tee -a "$RESULT"
   sleep 5; dump "web_after_save"
   if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(add automatically|add|add to home screen)$"); then adb shell input tap $pos; sleep 2; fi
@@ -315,6 +319,7 @@ if [ -n "$WEB_APK" ]; then
   adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select a.name from action_table a join event_table e on a.eventId=e.id where e.scenario_id=$WID order by a.priority;'" | tee "$OUT/web_actions.txt" | tee -a "$RESULT"
   grep -qi "coffee$" "$OUT/web_actions.txt" || WEB_REC_FAIL="the 'Coffee' tab tap was not recorded"
   grep -qi "iced americano" "$OUT/web_actions.txt" || WEB_REC_FAIL="${WEB_REC_FAIL:-} the 'Iced americano' tap was not recorded"
+  grep -qi "1,500 won" "$OUT/web_actions.txt" && WEB_REC_FAIL="${WEB_REC_FAIL:-} the price was recorded instead of the item name"
   grep -qiE "swipe|스와이프" "$OUT/web_actions.txt" || log "WARNING: no swipe recorded"
   echo "--- web recorder logcat"
   adb logcat -d | grep -E " (TapRecorder|TouchPassThroughOverlay)" | tail -60
