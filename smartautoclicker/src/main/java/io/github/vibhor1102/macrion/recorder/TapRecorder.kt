@@ -51,8 +51,12 @@ object TapRecorder {
     /** One recorded user step. */
     sealed class Step {
         data class Element(val type: TapElement.SelectorType, val value: String, val label: String) : Step()
-        data class Position(val x: Int, val y: Int) : Step()
-        data class Drag(val fromX: Int, val fromY: Int, val toX: Int, val toY: Int, val durationMs: Long) : Step()
+        /** [waitMs]: the time the user waited before this step, the screen may need it to be ready. */
+        data class Position(val x: Int, val y: Int, val waitMs: Long = POSITION_WAIT_BEFORE_MS) : Step()
+        data class Drag(
+            val fromX: Int, val fromY: Int, val toX: Int, val toY: Int, val durationMs: Long,
+            val waitMs: Long = SWIPE_WAIT_BEFORE_MS,
+        ) : Step()
     }
 
     private val _isRecording = MutableStateFlow(false)
@@ -78,6 +82,15 @@ object TapRecorder {
     private var touchOverlay: TouchPassThroughOverlay? = null
     private var touchDown: TouchDown? = null
     private var lastScrollStepMs = 0L
+    private var lastStepEndMs = 0L
+    private val warmUpHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val warmUp = object : Runnable {
+        override fun run() {
+            if (!_isRecording.value) return
+            warmUpScreenContent()
+            warmUpHandler.postDelayed(this, WARM_UP_PERIOD_MS)
+        }
+    }
     private var lastScrollForward: Boolean? = null
 
     private class TouchDown(val x: Float, val y: Float, val timeMs: Long, val target: TouchTarget?) {
@@ -132,6 +145,8 @@ object TapRecorder {
         touchDown = null
         lastScrollStepMs = 0L
         lastScrollForward = null
+        lastStepEndMs = 0L
+        if (observingTouches) warmUpHandler.postDelayed(warmUp, WARM_UP_PERIOD_MS)
 
         _isRecording.value = true
         Log.i(TAG, "Recording started, observing touches: $observingTouches")
@@ -199,12 +214,17 @@ object TapRecorder {
         if (down.multiTouch) return Unit.also { Log.d(TAG, "Touch ignored: several fingers") }
         val slop = serviceRef?.get()?.resources?.displayMetrics?.density?.times(TAP_SLOP_DP) ?: 24f
 
+        // Steps without an element to wait for are played after the same wait as the user's.
+        val waitMs = if (lastStepEndMs == 0L) POSITION_WAIT_BEFORE_MS
+            else (down.timeMs - lastStepEndMs).coerceIn(MIN_STEP_WAIT_MS, MAX_STEP_WAIT_MS)
+        lastStepEndMs = SystemClock.uptimeMillis()
         val step = if (down.maxDistance <= slop) {
-            target.step
+            (target.step as? Step.Position)?.copy(waitMs = waitMs) ?: target.step
         } else {
             Step.Drag(
                 down.x.toInt(), down.y.toInt(), upX.toInt(), upY.toInt(),
                 (SystemClock.uptimeMillis() - down.timeMs).coerceIn(SWIPE_MIN_DURATION_MS, SWIPE_MAX_DURATION_MS),
+                waitMs,
             )
         }
         if (startPackage == null) startPackage = target.pkg
@@ -233,8 +253,32 @@ object TapRecorder {
             return null
         }
         val node = root.deepestAt(x, y)
-        val step = node?.toStep("") ?: Step.Position(x, y)
+        // Without a text or an id to find the element again, the touched point itself is played.
+        val step = node?.toStep("")?.takeIf { it is Step.Element } ?: Step.Position(x, y)
         return TouchTarget(pkg, step)
+    }
+
+    /**
+     * Web pages only describe their content once asked, and take a moment to do it: keep asking while recording so
+     * the element under the next touch is known.
+     */
+    private fun warmUpScreenContent() {
+        val service = serviceRef?.get() ?: return
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) service.clearCache()
+            val root = service.windows?.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
+                ?.maxByOrNull { it.layer }?.root ?: return
+            var count = 0
+            val stack = ArrayDeque<AccessibilityNodeInfo>()
+            stack.add(root)
+            while (stack.isNotEmpty() && count < WARM_UP_MAX_NODES) {
+                val node = stack.removeFirst()
+                count++
+                for (i in 0 until node.childCount) node.getChild(i)?.let(stack::add)
+            }
+        } catch (ex: Exception) {
+            Log.w(TAG, "Can't read the screen content", ex)
+        }
     }
 
     /** The smallest visible element containing the point. */
@@ -370,13 +414,13 @@ object TapRecorder {
                     priority = actions.size, swipeDuration = step.durationMs,
                     from = Point(step.fromX, step.fromY), to = Point(step.toX, step.toY),
                     // Let the screen settle after the previous step, and the scroll end before the next one.
-                    waitBeforeMs = SWIPE_WAIT_BEFORE_MS, waitAfterMs = SWIPE_WAIT_AFTER_MS,
+                    waitBeforeMs = step.waitMs, waitAfterMs = SWIPE_WAIT_AFTER_MS,
                 )
                 is Step.Position -> Click(
                     id = newId(), eventId = eventId, name = "${index + 1}. (${step.x}, ${step.y})",
                     priority = actions.size, pressDuration = POSITION_PRESS_DURATION_MS,
                     positionType = Click.PositionType.USER_SELECTED, position = Point(step.x, step.y),
-                    waitBeforeMs = POSITION_WAIT_BEFORE_MS,
+                    waitBeforeMs = step.waitMs,
                 )
             }
         }
@@ -457,6 +501,7 @@ object TapRecorder {
     private fun String.isUsableText(): Boolean = isNotEmpty() && length <= TEXT_MAX_LENGTH
 
     private fun restoreServiceInfo() {
+        warmUpHandler.removeCallbacks(warmUp)
         touchOverlay?.hide()
         touchOverlay = null
         observingTouches = false
@@ -532,6 +577,10 @@ private val SYSTEM_OVERLAY_PREFIXES = listOf("com.samsung.android.samsungpass", 
 private const val RECORDED_EVENT_TYPES = AccessibilityEvent.TYPE_VIEW_CLICKED or AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
     AccessibilityEvent.TYPE_VIEW_SCROLLED
 private const val TAP_SLOP_DP = 12f
+private const val MIN_STEP_WAIT_MS = 500L
+private const val MAX_STEP_WAIT_MS = 15_000L
+private const val WARM_UP_PERIOD_MS = 1_000L
+private const val WARM_UP_MAX_NODES = 250
 private const val TREE_MAX_DEPTH = 60
 private const val SWIPE_MIN_DURATION_MS = 100L
 private const val SWIPE_MAX_DURATION_MS = 2_000L
