@@ -96,6 +96,9 @@ internal class TouchPassThroughOverlay(
     }
 
     private fun onTouchEvent(event: MotionEvent) {
+        if (event.actionMasked != MotionEvent.ACTION_MOVE) {
+            Log.d(TAG, "Touch ${MotionEvent.actionToString(event.actionMasked)} at ${event.rawX},${event.rawY} forwarding=$forwarding")
+        }
         if (forwarding) return
         // Only the first finger is replayed.
         onTouch(event)
@@ -150,6 +153,7 @@ internal class TouchPassThroughOverlay(
             Log.w(TAG, "Can't replay the touch", ex)
             false
         }
+        Log.d(TAG, "Replaying ${gesture.size} points over $duration ms: $dispatched")
         if (!dispatched) done()
     }
 

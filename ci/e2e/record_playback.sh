@@ -25,7 +25,7 @@ fail() {
   log "FAIL: $*"; dump "fail"
   adb logcat -d > "$OUT/logcat.txt"
   echo "--- relevant logcat"
-  grep -E " (TapRecorder|RecorderController|ShortcutLauncherActivity|PermissionsController|SmartAutoClickerService|LocalService|DetectorEngine|ScenarioProcessor|ScenarioSchedules|ScheduleReceiver|ElementTap[A-Za-z]*|ServiceActionExecutor|AndroidActionExecutor[A-Za-z]*|AndroidRuntime: (FATAL|Process|java)|System.err)" "$OUT/logcat.txt" \
+  grep -E " (TapRecorder|TouchPassThroughOverlay|RecorderController|ShortcutLauncherActivity|PermissionsController|SmartAutoClickerService|LocalService|DetectorEngine|ScenarioProcessor|ScenarioSchedules|ScheduleReceiver|ElementTap[A-Za-z]*|ServiceActionExecutor|AndroidActionExecutor[A-Za-z]*|AndroidRuntime: (FATAL|Process|java)|System.err)" "$OUT/logcat.txt" \
     | grep -v -E "StrictMode|chatty|RuntimeInit|boot image|lock profiling|Calling main|Shutting down|VM exiting" | tail -150
   exit 1
 }
@@ -139,7 +139,7 @@ if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(add automatically|add|add to home
 fi
 
 echo "--- recorder logcat"
-adb logcat -d | grep -E " (TapRecorder|RecorderController|ShortcutLauncherActivity|PermissionsController)" | tail -60
+adb logcat -d | grep -E " (TapRecorder|TouchPassThroughOverlay|RecorderController|ShortcutLauncherActivity|PermissionsController)" | tail -60
 DB=$(adb shell ls /data/data/$PKG/databases/ | tr -d '\r' | grep -v -E "journal|wal|shm" | head -1)
 log "database: $DB"
 adb shell "sqlite3 /data/data/$PKG/databases/$DB '.tables'" | tee -a "$RESULT"
@@ -290,7 +290,7 @@ if [ -n "$WEB_APK" ]; then
   grep -qi "iced americano" "$OUT/web_actions.txt" || WEB_REC_FAIL="${WEB_REC_FAIL:-} the 'Iced americano' tap was not recorded"
   grep -qiE "swipe|스와이프" "$OUT/web_actions.txt" || log "WARNING: no swipe recorded"
   echo "--- web recorder logcat"
-  adb logcat -d | grep -E " TapRecorder" | tail -30
+  adb logcat -d | grep -E " (TapRecorder|TouchPassThroughOverlay)" | tail -60
 
   # Play it back.
   adb shell am force-stop $WEB

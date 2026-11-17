@@ -145,7 +145,7 @@ object TapRecorder {
         if (pkg in ignoredPackages || pkg.isSystemOverlayPackage()) return
 
         // The touches give the taps and swipes when they are observed, the click and scroll events would repeat them.
-        if (touchesSeen && observingTouches) return
+        if (observingTouches) return
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
             onScrolled(event, pkg)
             return
@@ -194,6 +194,7 @@ object TapRecorder {
     private var touchesSeen = false
 
     private fun onTouchEnded(down: TouchDown, upX: Float, upY: Float) {
+        Log.d(TAG, "Touch ended, moved ${down.maxDistance}px, target ${down.target?.pkg}")
         val target = down.target ?: return Unit.also { Log.d(TAG, "Touch ignored: not in a recorded app") }
         if (down.multiTouch) return Unit.also { Log.d(TAG, "Touch ignored: several fingers") }
         val slop = serviceRef?.get()?.resources?.displayMetrics?.density?.times(TAP_SLOP_DP) ?: 24f
