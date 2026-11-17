@@ -122,7 +122,7 @@ private fun ValidScenarioCard(
                     IconButton(onClick = onExpand) {
                         Icon(
                             painterResource(if (item.expanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down),
-                            null,
+                            stringResource(if (item.expanded) R.string.content_desc_card_collapse else R.string.content_desc_card_expand),
                         )
                     }
                 }

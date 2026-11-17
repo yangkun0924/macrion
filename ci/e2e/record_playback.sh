@@ -221,6 +221,8 @@ check_playback "schedule_auto"
 reset_apps
 adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 sleep 5
+# The buttons are in the card details: expand the card first.
+tap "card_expand" "^show details$" "^자세히 보기$" || fail "card expand button not found"
 tap "schedule_button" "^schedule$" "^예약 실행$" || fail "'Schedule' button not found on the scenario card"
 tap "schedule_add" "^add$" "^추가$" || fail "'Add' not found in the schedule dialog"
 tap "schedule_time_ok" "^ok$" "^확인$" || fail "time picker OK not found"
