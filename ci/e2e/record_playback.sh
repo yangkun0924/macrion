@@ -289,9 +289,19 @@ if [ -n "$WEB_APK" ]; then
   adb shell input keyevent KEYCODE_HOME; sleep 3
 
   # Record it.
+  adb shell am force-stop $WEB
   adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
   sleep 5
+  for _ in 1 2 3 4; do
+    dump "web_macrion_start"
+    python3 "$HERE/ui.py" has "$LAST" "^record taps$" && break
+    pos=$(python3 "$HERE/ui.py" find "$LAST" "^(ok|got it|close|skip|later|not now|dismiss|cancel|확인|닫기)$") && adb shell input tap $pos && sleep 2 \
+      || { adb shell input keyevent KEYCODE_BACK; sleep 2; adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; sleep 4; }
+  done
+  REC=$(pos_in "$LAST" "^record taps$") || fail "'Record taps' button not found before the web recording"
+  for _ in 1 2 3 4 5; do sleep 3; adb shell dumpsys accessibility | grep -q "$PKG" && break; done
   adb shell dumpsys accessibility | grep -q "$PKG" || fail "accessibility service not bound before the web recording"
+  sleep 3
   adb shell input tap $REC; sleep 3; shot "web_recording_started"
   adb shell dumpsys notification --noredact | grep -q "Recording your taps" || fail "web recording notification not shown"
   adb shell monkey -p $WEB -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
