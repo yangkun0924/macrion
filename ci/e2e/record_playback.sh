@@ -70,7 +70,10 @@ adb shell settings put secure enabled_accessibility_services "$SVC"
 adb shell settings put secure accessibility_enabled 1
 adb shell appops set $PKG SYSTEM_ALERT_WINDOW allow
 adb shell settings put global heads_up_notifications_enabled 0
-sleep 3
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  sleep 3
+  adb shell dumpsys accessibility | grep -q "$PKG" && break
+done
 adb shell dumpsys accessibility | grep -q "$PKG" || fail "accessibility service not bound"
 log "accessibility service enabled"
 
