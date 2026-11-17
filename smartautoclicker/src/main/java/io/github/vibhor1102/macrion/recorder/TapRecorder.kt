@@ -77,7 +77,6 @@ object TapRecorder {
      */
     private var observingTouches = false
     private var originalMotionSources = 0
-    private var originalObservedMotionSources = 0
     private var touchDown: TouchDown? = null
     private var lastScrollStepMs = 0L
     private var lastScrollForward: Boolean? = null
@@ -130,9 +129,9 @@ object TapRecorder {
             AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             originalMotionSources = info.motionEventSources
-            originalObservedMotionSources = info.observedMotionEventSources
             info.motionEventSources = info.motionEventSources or InputDevice.SOURCE_TOUCHSCREEN
-            info.observedMotionEventSources = info.observedMotionEventSources or InputDevice.SOURCE_TOUCHSCREEN
+            // Observed only: the touches still reach the apps. No getter for it, nothing else sets it.
+            info.setObservedMotionEventSources(InputDevice.SOURCE_TOUCHSCREEN)
         }
         service.serviceInfo = info
         observingTouches = Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM
@@ -471,7 +470,7 @@ object TapRecorder {
             info.eventTypes = originalEventTypes
             info.flags = originalFlags
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                info.observedMotionEventSources = originalObservedMotionSources
+                info.setObservedMotionEventSources(0)
                 info.motionEventSources = originalMotionSources
             }
             service.serviceInfo = info
