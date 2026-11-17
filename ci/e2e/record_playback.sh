@@ -80,37 +80,57 @@ for p in com.android.deskclock com.android.calculator2 com.android.contacts com.
 done
 log "decoy app: ${DECOY:-none}"
 
+# IMPORTANT: "uiautomator dump" connects a UiAutomation that suppresses every other accessibility service while it
+# runs, which unbinds Macrion's service (and stops a recording). So the screens are only dumped while nothing of
+# Macrion has to run: positions are found first, then the recording and the playbacks are driven blind.
+shot() { STEP=$((STEP + 1)); adb exec-out screencap -p > "$OUT/$(printf "%02d_%s" "$STEP" "$1").png"; }
+pos_in() { local f="$1"; shift; for rx in "$@"; do python3 "$HERE/ui.py" find "$f" "$rx" && return 0; done; return 1; }
+focused_window() { adb shell dumpsys window | grep -m1 -E "mCurrentFocus" | tr -d '\r'; }
+
+# 1. Find the Settings positions to tap, and the screen they end on.
+adb shell monkey -p $TARGET -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+sleep 5; dump "find_step1"
+P1=$(pos_in "$LAST" "^network (&|and) internet$" "^connected devices$" "^apps$") || fail "first Settings item not found"
+adb shell input tap $P1; sleep 3; dump "find_step2"
+P2=$(pos_in "$LAST" "^data saver$" "^private dns$" "^hotspot (&|and) tethering$" "^internet$" "^pair new device$" "^see all .*apps$") \
+  || fail "second Settings item not found"
+adb shell input tap $P2; sleep 3; dump "expected_end_screen"
+EXPECTED="$LAST"
+log "Settings taps: $P1 then $P2"
+adb shell am force-stop $TARGET
+adb shell input keyevent KEYCODE_HOME; sleep 2
+
+# 2. Start the recording from the app.
 adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 sleep 6
-# First launch may show dialogs: dismiss the usual ones.
 for _ in 1 2 3; do
   dump "macrion_start"
   python3 "$HERE/ui.py" has "$LAST" "^record taps$" && break
   pos=$(python3 "$HERE/ui.py" find "$LAST" "^(ok|got it|close|skip|later|not now|dismiss|continue|확인|닫기)$") && adb shell input tap $pos && sleep 2 || break
 done
-tap "record_button" "^record taps$" || fail "'Record taps' button not found"
-
-dump "recording_started"
+REC=$(pos_in "$LAST" "^record taps$") || fail "'Record taps' button not found"
+sleep 3 # let the accessibility service bind again after the dump
+adb shell dumpsys accessibility | grep -q "$PKG" || fail "accessibility service not bound before recording"
+log "tap 'Record taps' at $REC"
+adb shell input tap $REC
+sleep 3; shot "recording_started"
 adb shell dumpsys notification --noredact | grep -q "Recording your taps" || fail "recording notification not shown"
 log "recording notification shown"
 
+# 3. A decoy app window shows up first (like Samsung Pass), then the real taps in Settings.
 if [ -n "$DECOY" ]; then
   adb shell monkey -p $DECOY -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-  sleep 4; dump "decoy_opened"
+  sleep 4; shot "decoy_opened"
   adb shell input keyevent KEYCODE_HOME; sleep 2
 fi
-
 adb shell monkey -p $TARGET -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-sleep 5
-tap "settings_step1" "^network (&|and) internet$" "^connected devices$" "^apps$" || fail "first Settings item not found"
-tap "settings_step2" "^data saver$" "^private dns$" "^hotspot (&|and) tethering$" "^internet$" "^pair new device$" "^see all .*apps$" \
-  || fail "second Settings item not found"
-dump "recorded_end_screen"
-EXPECTED="$LAST"
+sleep 5; adb shell input tap $P1; sleep 3; adb shell input tap $P2; sleep 3
+shot "recorded_end_screen"
 
-adb shell cmd statusbar expand-notifications; sleep 3
-tap "stop_and_save" "^stop and save$" "^종료하고 저장$" || fail "'Stop and save' not found in the notification"
-sleep 4
+# 4. Stop and save: same activity as the notification "Stop and save" button.
+log "stop and save"
+adb shell am start -n "$PKG/io.github.vibhor1102.macrion.recorder.RecorderActionActivity" -a io.github.vibhor1102.macrion.recorder.STOP | tee -a "$RESULT"
+sleep 5
 dump "after_save"
 # The app asks the launcher to pin a home screen shortcut: accept it when the dialog shows.
 if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(add automatically|add|add to home screen)$"); then
@@ -141,15 +161,17 @@ reset_apps() {
 check_playback() {
   local label="$1"
   sleep 4
-  dump "${label}_start"
-  if python3 "$HERE/ui.py" has "$LAST" "(share your screen|start recording or casting|screen capture|화면.*공유|start now)"; then
+  shot "${label}_start"
+  local focus; focus=$(focused_window)
+  echo "focus: $focus"
+  if echo "$focus" | grep -qiE "mediaprojection|MediaProjectionPermission"; then
     fail "[$label] the 'share your screen' dialog showed up, playback must start directly"
   fi
   log "[$label] no screen sharing dialog"
-  sleep 16
-  dump "${label}_end_screen"
+  sleep 20
   TOP=$(top_package)
   log "[$label] app on screen after playback: $TOP"
+  dump "${label}_end_screen"
   [ "$TOP" = "$TARGET" ] || fail "[$label] playback opened '$TOP' instead of '$TARGET'"
   SIMILARITY=$(python3 - "$EXPECTED" "$LAST" <<'EOF2'
 import sys, xml.etree.ElementTree as ET
@@ -161,6 +183,7 @@ EOF2
 )
   log "[$label] end screen similarity with the recorded one: $SIMILARITY"
   python3 -c "import sys; sys.exit(0 if float('$SIMILARITY') >= 0.6 else 1)" || fail "[$label] playback did not end on the recorded screen"
+  sleep 3 # service binds again after the dump
   log "[$label] OK"
 }
 
@@ -181,7 +204,10 @@ sleep 3
 adb shell dumpsys notification --noredact | grep -q "Run e2e?" || fail "schedule notification not shown"
 log "schedule notification shown"
 adb shell cmd statusbar expand-notifications; sleep 3
-tap "schedule_notification" "^run$" "^실행$" || fail "'Run' button not found in the schedule notification"
+dump "schedule_notification"
+RUN=$(pos_in "$LAST" "^run$" "^실행$") || fail "'Run' button not found in the schedule notification"
+sleep 3 # service binds again after the dump
+adb shell input tap $RUN
 check_playback "schedule_ask"
 
 # 3. Schedule in automatic mode: the scenario starts by itself.
