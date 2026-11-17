@@ -95,6 +95,7 @@ object TapRecorder {
             getAutofillPackage(context)?.let(::add)
         }
 
+        Log.i(TAG, "Ignored packages: $ignoredPackages")
         // Some devices return a null service info, start from a fresh one then.
         val info = service.serviceInfo ?: AccessibilityServiceInfo()
         originalEventTypes = info.eventTypes
@@ -283,10 +284,19 @@ object TapRecorder {
         }
     }
 
-    private fun getHomePackages(context: Context): List<String> =
-        context.packageManager
-            .queryIntentActivities(AndroidIntent(AndroidIntent.ACTION_MAIN).addCategory(AndroidIntent.CATEGORY_HOME), 0)
+    /**
+     * The launcher(s). Not every app with a HOME activity: Settings has one (FallbackHome) and it must be recordable.
+     */
+    private fun getHomePackages(context: Context): List<String> {
+        val homeIntent = AndroidIntent(AndroidIntent.ACTION_MAIN).addCategory(AndroidIntent.CATEGORY_HOME)
+        val default = context.packageManager
+            .resolveActivity(homeIntent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+        if (default != null && default != "android") return listOf(default)
+
+        return context.packageManager.queryIntentActivities(homeIntent, 0)
             .mapNotNull { it.activityInfo?.packageName }
+            .filterNot { it == "com.android.settings" || it.endsWith(".settings") }
+    }
 
     private fun getInputMethodPackages(context: Context): List<String> =
         try {
