@@ -216,6 +216,8 @@ object TapRecorder {
     /** The app window under a point and the element there, or null for system windows, keyboards and this app. */
     private fun targetAt(x: Int, y: Int): TouchTarget? {
         val service = serviceRef?.get() ?: return null
+        // The cached screen content is only refreshed by events the service doesn't listen to: read it again.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) service.clearCache()
         val windows = try { service.windows } catch (_: Exception) { null } ?: return null
         val window = windows
             .filter { it.type != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY && Rect().also(it::getBoundsInScreen).contains(x, y) }

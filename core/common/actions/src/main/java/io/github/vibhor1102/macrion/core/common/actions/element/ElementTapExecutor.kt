@@ -168,6 +168,9 @@ internal class ElementTapExecutor @Inject constructor() {
     }
 
     private fun AccessibilityService.candidateRoots(): List<AccessibilityNodeInfo> = buildList {
+        // The cached screen content is only refreshed by events the service doesn't listen to (a web page changing
+        // its content for example): read it again.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) clearCache()
         rootInActiveWindow?.let { root ->
             if (root.packageName?.toString() != packageName) add(root)
         }

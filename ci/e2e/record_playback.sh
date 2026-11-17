@@ -143,7 +143,8 @@ if [ -n "$DECOY" ]; then
   adb shell input keyevent KEYCODE_HOME; sleep 2
 fi
 adb shell monkey -p $TARGET -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-sleep 5; adb shell input tap $P1; sleep 3; adb shell input tap $P2; sleep 3
+sleep 5; adb shell input tap $P1; sleep 3; echo "after tap 1: $(focused_window)"; adb shell input tap $P2; sleep 3
+echo "after tap 2: $(focused_window)"
 shot "recorded_end_screen"
 
 # 4. Stop and save: same activity as the notification "Stop and save" button.
@@ -294,7 +295,7 @@ if [ -n "$WEB_APK" ]; then
   adb shell input tap $REC; sleep 3; shot "web_recording_started"
   adb shell dumpsys notification --noredact | grep -q "Recording your taps" || fail "web recording notification not shown"
   adb shell monkey -p $WEB -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-  sleep 4; adb shell input tap $WP1; sleep 6; adb shell input tap $WP2; sleep 2
+  sleep 4; adb shell input tap $WP1; sleep 6; echo "after web tap 1: $(focused_window)"; adb shell input tap $WP2; sleep 2
   for _ in 1 2 3 4 5 6 7 8; do adb shell input swipe $SWIPE; sleep 1; done
   adb shell input tap $WP3; sleep 2; shot "web_recorded_end"
   adb shell am start -n "$PKG/io.github.vibhor1102.macrion.recorder.RecorderActionActivity" -a io.github.vibhor1102.macrion.recorder.STOP | tee -a "$RESULT"
