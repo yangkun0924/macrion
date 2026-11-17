@@ -94,7 +94,7 @@ jobs:
     - name: Record and play back on the emulator
       uses: reactivecircus/android-emulator-runner@v2
       with:
-        api-level: 34
+        api-level: 35
         target: default
         arch: x86_64
         disable-animations: true

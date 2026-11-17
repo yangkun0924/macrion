@@ -307,6 +307,9 @@ class SmartAutoClickerService : AccessibilityService() {
 
     override fun onInterrupt() { /* Unused */ }
     override fun onAccessibilityEvent(event: AccessibilityEvent?) { TapRecorder.onAccessibilityEvent(event) }
+
+    /** Touches observed while recording (Android 15+), see [TapRecorder]. */
+    override fun onMotionEvent(event: android.view.MotionEvent) { TapRecorder.onMotionEvent(event) }
 }
 
 /** Tag for the logs. */

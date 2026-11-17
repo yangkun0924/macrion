@@ -4,6 +4,7 @@
     <string name="recorded_event_name">녹화한 탭</string>
     <string name="recorded_condition_name">시작 시</string>
     <string name="recorded_step_launch_app">앱 열기</string>
+    <string name="recorded_step_swipe">스와이프</string>
     <string name="recorded_step_finish">종료</string>
     <string name="menu_item_title_record">탭 녹화</string>
     <string name="toast_recorder_service_disabled">먼저 Macrion 접근성 서비스를 켠 다음 다시 시도해 주세요.</string>

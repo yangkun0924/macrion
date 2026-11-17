@@ -21,7 +21,7 @@
     android:canPerformGestures="true"
     android:canRequestFilterKeyEvents="true"
     android:canRetrieveWindowContent="true"
-    android:accessibilityEventTypes="typeViewClicked|typeWindowStateChanged"
+    android:accessibilityEventTypes="typeViewClicked|typeViewScrolled|typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="0"
     android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"/>

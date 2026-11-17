@@ -25,7 +25,7 @@ fail() {
   log "FAIL: $*"; dump "fail"
   adb logcat -d > "$OUT/logcat.txt"
   echo "--- relevant logcat"
-  grep -E " (TapRecorder|RecorderController|ShortcutLauncherActivity|PermissionsController|SmartAutoClickerService|LocalService|DetectorEngine|ScenarioProcessor|ScenarioSchedules|ScheduleReceiver|ElementTap[A-Za-z]*|AndroidActionExecutor[A-Za-z]*|AndroidRuntime: (FATAL|Process|java)|System.err)" "$OUT/logcat.txt" \
+  grep -E " (TapRecorder|RecorderController|ShortcutLauncherActivity|PermissionsController|SmartAutoClickerService|LocalService|DetectorEngine|ScenarioProcessor|ScenarioSchedules|ScheduleReceiver|ElementTap[A-Za-z]*|ServiceActionExecutor|AndroidActionExecutor[A-Za-z]*|AndroidRuntime: (FATAL|Process|java)|System.err)" "$OUT/logcat.txt" \
     | grep -v -E "StrictMode|chatty|RuntimeInit|boot image|lock profiling|Calling main|Shutting down|VM exiting" | tail -150
   exit 1
 }
@@ -276,7 +276,10 @@ if [ -n "$WEB_APK" ]; then
   WID=$(adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select max(id) from scenario_table;'" | tr -d '\r')
   [ "$WID" != "$ID" ] || fail "the web recording was not saved"
   log "web scenario $WID actions:"
-  adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select a.name from action_table a join event_table e on a.eventId=e.id where e.scenario_id=$WID order by a.priority;'" | tee -a "$RESULT"
+  adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select a.name from action_table a join event_table e on a.eventId=e.id where e.scenario_id=$WID order by a.priority;'" | tee "$OUT/web_actions.txt" | tee -a "$RESULT"
+  grep -qi "coffee$" "$OUT/web_actions.txt" || WEB_REC_FAIL="the 'Coffee' tab tap was not recorded"
+  grep -qi "iced americano" "$OUT/web_actions.txt" || WEB_REC_FAIL="${WEB_REC_FAIL:-} the 'Iced americano' tap was not recorded"
+  grep -qiE "swipe|스와이프" "$OUT/web_actions.txt" || log "WARNING: no swipe recorded"
   echo "--- web recorder logcat"
   adb logcat -d | grep -E " TapRecorder" | tail -30
 
@@ -293,7 +296,8 @@ if [ -n "$WEB_APK" ]; then
   python3 "$HERE/ui.py" has "$LAST" "^ordered: iced americano$" || fail "[web] playback did not order the iced americano"
   echo "--- web playback logcat"
   adb logcat -d | grep -E " (ElementTap[A-Za-z]*|ServiceActionExecutor)" | tail -30
-  log "[web] OK: ordered by the playback"
+  [ -z "${WEB_REC_FAIL:-}" ] || fail "[web] recording incomplete: $WEB_REC_FAIL"
+  log "[web] OK: recorded and ordered by the playback"
 fi
 
 adb logcat -d > "$OUT/logcat.txt"

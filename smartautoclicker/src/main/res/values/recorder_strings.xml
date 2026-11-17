@@ -4,6 +4,7 @@
     <string name="recorded_event_name">Recorded taps</string>
     <string name="recorded_condition_name">On start</string>
     <string name="recorded_step_launch_app">Open app</string>
+    <string name="recorded_step_swipe">Swipe</string>
     <string name="recorded_step_finish">Finish</string>
     <string name="menu_item_title_record">Record taps</string>
     <string name="toast_recorder_service_disabled">Enable the Macrion accessibility service first, then try again.</string>

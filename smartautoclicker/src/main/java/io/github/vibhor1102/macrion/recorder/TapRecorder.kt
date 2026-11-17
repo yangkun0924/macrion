@@ -8,6 +8,10 @@ import android.content.Context
 import android.content.Intent as AndroidIntent
 import android.graphics.Point
 import android.graphics.Rect
+import android.os.Build
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityWindowInfo
@@ -22,6 +26,7 @@ import io.github.vibhor1102.macrion.core.domain.model.AND
 import io.github.vibhor1102.macrion.core.domain.model.action.Action
 import io.github.vibhor1102.macrion.core.domain.model.action.Click
 import io.github.vibhor1102.macrion.core.domain.model.action.Intent
+import io.github.vibhor1102.macrion.core.domain.model.action.Swipe
 import io.github.vibhor1102.macrion.core.domain.model.action.TapElement
 import io.github.vibhor1102.macrion.core.domain.model.action.ToggleEvent
 import io.github.vibhor1102.macrion.core.domain.model.condition.TriggerCondition
@@ -48,6 +53,7 @@ object TapRecorder {
     sealed class Step {
         data class Element(val type: TapElement.SelectorType, val value: String, val label: String) : Step()
         data class Position(val x: Int, val y: Int) : Step()
+        data class Drag(val fromX: Int, val fromY: Int, val toX: Int, val toY: Int, val durationMs: Long) : Step()
     }
 
     private val _isRecording = MutableStateFlow(false)
@@ -64,6 +70,25 @@ object TapRecorder {
     private var ignoredPackages: Set<String> = emptySet()
     private var startPackage: String? = null
     private val steps = mutableListOf<Step>()
+
+    /**
+     * Android 15+: the touches themselves are observed (not consumed), so taps and swipes are recorded in any app,
+     * web pages included, which often don't report their clicks to accessibility services.
+     */
+    private var observingTouches = false
+    private var originalMotionSources = 0
+    private var originalObservedMotionSources = 0
+    private var touchDown: TouchDown? = null
+    private var lastScrollStepMs = 0L
+    private var lastScrollForward: Boolean? = null
+
+    private class TouchDown(val x: Float, val y: Float, val timeMs: Long, val target: TouchTarget?) {
+        var maxDistance = 0f
+        var multiTouch = false
+    }
+
+    /** What is under a finger when it touches the screen: the app, and how to find the element again. */
+    private class TouchTarget(val pkg: String, val step: Step)
 
     /** Called by the accessibility service once connected. */
     fun attach(service: AccessibilityService, smartRepository: IRepository) {
@@ -103,10 +128,20 @@ object TapRecorder {
         info.eventTypes = info.eventTypes or RECORDED_EVENT_TYPES
         info.flags = info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
             AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            originalMotionSources = info.motionEventSources
+            originalObservedMotionSources = info.observedMotionEventSources
+            info.motionEventSources = info.motionEventSources or InputDevice.SOURCE_TOUCHSCREEN
+            info.observedMotionEventSources = info.observedMotionEventSources or InputDevice.SOURCE_TOUCHSCREEN
+        }
         service.serviceInfo = info
+        observingTouches = Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM
+        touchDown = null
+        lastScrollStepMs = 0L
+        lastScrollForward = null
 
         _isRecording.value = true
-        Log.i(TAG, "Recording started")
+        Log.i(TAG, "Recording started, observing touches: $observingTouches")
         return true
     }
 
@@ -115,6 +150,13 @@ object TapRecorder {
         val pkg = event.packageName?.toString() ?: return
         Log.d(TAG, "Event ${AccessibilityEvent.eventTypeToString(event.eventType)} from $pkg")
         if (pkg in ignoredPackages || pkg.isSystemOverlayPackage()) return
+
+        // The touches give the taps and swipes when they are observed, the click and scroll events would repeat them.
+        if (touchesSeen && observingTouches) return
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
+            onScrolled(event, pkg)
+            return
+        }
 
         // The app to launch is the one of the first real tap made in a regular app window. Window changes are not used
         // for it: on some devices (Samsung Pass, autofill, keyboards, edge panels...) a system window shows up first.
@@ -129,6 +171,132 @@ object TapRecorder {
         steps.add(step)
         _stepCount.value = steps.size
         Log.d(TAG, "Recorded $step in $pkg")
+    }
+
+    /**
+     * Called with the observed touches on Android 15+. A touch that barely moves is a tap on the element under the
+     * finger, found when the finger goes down (the screen changes right after the tap). Other touches are swipes.
+     */
+    fun onMotionEvent(event: MotionEvent) {
+        if (!_isRecording.value || !observingTouches) return
+        if (!event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN)) return
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                touchesSeen = true
+                touchDown = TouchDown(event.rawX, event.rawY, SystemClock.uptimeMillis(), targetAt(event.rawX.toInt(), event.rawY.toInt()))
+            }
+            MotionEvent.ACTION_POINTER_DOWN -> touchDown?.multiTouch = true
+            MotionEvent.ACTION_MOVE -> touchDown?.let { down ->
+                down.maxDistance = maxOf(down.maxDistance, distance(down.x, down.y, event.rawX, event.rawY))
+            }
+            MotionEvent.ACTION_UP -> {
+                val down = touchDown ?: return
+                touchDown = null
+                down.maxDistance = maxOf(down.maxDistance, distance(down.x, down.y, event.rawX, event.rawY))
+                onTouchEnded(down, event.rawX, event.rawY)
+            }
+            MotionEvent.ACTION_CANCEL -> touchDown = null
+        }
+    }
+
+    private var touchesSeen = false
+
+    private fun onTouchEnded(down: TouchDown, upX: Float, upY: Float) {
+        val target = down.target ?: return Unit.also { Log.d(TAG, "Touch ignored: not in a recorded app") }
+        if (down.multiTouch) return Unit.also { Log.d(TAG, "Touch ignored: several fingers") }
+        val slop = serviceRef?.get()?.resources?.displayMetrics?.density?.times(TAP_SLOP_DP) ?: 24f
+
+        val step = if (down.maxDistance <= slop) {
+            target.step
+        } else {
+            Step.Drag(
+                down.x.toInt(), down.y.toInt(), upX.toInt(), upY.toInt(),
+                (SystemClock.uptimeMillis() - down.timeMs).coerceIn(SWIPE_MIN_DURATION_MS, SWIPE_MAX_DURATION_MS),
+            )
+        }
+        if (startPackage == null) startPackage = target.pkg
+        steps.add(step)
+        _stepCount.value = steps.size
+        Log.d(TAG, "Recorded $step in ${target.pkg}")
+    }
+
+    /** The app window under a point and the element there, or null for system windows, keyboards and this app. */
+    private fun targetAt(x: Int, y: Int): TouchTarget? {
+        val service = serviceRef?.get() ?: return null
+        val windows = try { service.windows } catch (_: Exception) { null } ?: return null
+        val window = windows
+            .filter { Rect().also(it::getBoundsInScreen).contains(x, y) }
+            .maxByOrNull { it.layer } ?: return null
+        if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION) {
+            Log.d(TAG, "Touch in window of type ${window.type}, ignored")
+            return null
+        }
+        val root = window.root ?: return null
+        val pkg = root.packageName?.toString() ?: return null
+        if (pkg in ignoredPackages || pkg.isSystemOverlayPackage()) {
+            Log.d(TAG, "Touch in $pkg, ignored")
+            return null
+        }
+        val node = root.deepestAt(x, y)
+        val step = node?.toStep("") ?: Step.Position(x, y)
+        return TouchTarget(pkg, step)
+    }
+
+    /** The smallest visible element containing the point. */
+    private fun AccessibilityNodeInfo.deepestAt(x: Int, y: Int): AccessibilityNodeInfo? {
+        var best: AccessibilityNodeInfo? = null
+        var bestArea = Long.MAX_VALUE
+        val stack = ArrayDeque<Pair<AccessibilityNodeInfo, Int>>()
+        stack.add(this to 0)
+        while (stack.isNotEmpty()) {
+            val (node, depth) = stack.removeLast()
+            val bounds = Rect().also(node::getBoundsInScreen)
+            if (!node.isVisibleToUser || !bounds.contains(x, y)) continue
+            val area = bounds.width().toLong() * bounds.height()
+            if (area <= bestArea && node.hasSelector()) {
+                best = node
+                bestArea = area
+            }
+            if (depth >= TREE_MAX_DEPTH) continue
+            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.add(it to depth + 1) }
+        }
+        return best
+    }
+
+    private fun AccessibilityNodeInfo.hasSelector(): Boolean =
+        text?.toString()?.trim().orEmpty().isUsableText() ||
+            !contentDescription?.toString()?.trim().isNullOrEmpty() ||
+            !viewIdResourceName.isNullOrBlank()
+
+    private fun distance(x1: Float, y1: Float, x2: Float, y2: Float): Float =
+        kotlin.math.hypot((x2 - x1).toDouble(), (y2 - y1).toDouble()).toFloat()
+
+    /** Without the touches (before Android 15), a scrolled list or page becomes a swipe over it. */
+    private fun onScrolled(event: AccessibilityEvent, pkg: String) {
+        if (!event.isInApplicationWindow()) return
+        val node = event.source ?: return
+        val bounds = Rect().also(node::getBoundsInScreen)
+        if (bounds.height() < MIN_SCROLL_VIEW_SIZE || bounds.width() < MIN_SCROLL_VIEW_SIZE) return
+        val deltaY = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) event.scrollDeltaY else 0
+        val deltaX = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) event.scrollDeltaX else 0
+        if (deltaX != 0 && deltaY == 0) return // carousels: not handled
+        val forward = deltaY >= 0 || deltaY == -1
+        val now = SystemClock.uptimeMillis()
+        // One user swipe sends many scroll events: one swipe step per gesture.
+        if (now - lastScrollStepMs < SCROLL_MERGE_MS && lastScrollForward == forward && steps.lastOrNull() is Step.Drag) {
+            lastScrollStepMs = now
+            return
+        }
+        lastScrollStepMs = now
+        lastScrollForward = forward
+        val x = bounds.centerX()
+        val top = bounds.top + bounds.height() / 4
+        val bottom = bounds.bottom - bounds.height() / 4
+        val step = if (forward) Step.Drag(x, bottom, x, top, SCROLL_SWIPE_DURATION_MS) else Step.Drag(x, top, x, bottom, SCROLL_SWIPE_DURATION_MS)
+        if (startPackage == null) startPackage = pkg
+        steps.add(step)
+        _stepCount.value = steps.size
+        Log.d(TAG, "Recorded scroll $step in $pkg")
     }
 
     /** False for keyboards, system windows (biometric prompts, shade...) and overlays, true otherwise. */
@@ -201,6 +369,14 @@ object TapRecorder {
                     // The app may first ask for a fingerprint or a PIN when opened: leave the user time for it.
                     timeoutMs = if (index == 0) FIRST_TAP_TIMEOUT_MS else RECORDED_TAP_TIMEOUT_MS,
                 )
+                is Step.Drag -> Swipe(
+                    id = newId(), eventId = eventId, name = "${index + 1}. " +
+                        context.getString(io.github.vibhor1102.macrion.R.string.recorded_step_swipe),
+                    priority = actions.size, swipeDuration = step.durationMs,
+                    from = Point(step.fromX, step.fromY), to = Point(step.toX, step.toY),
+                    // Let the screen settle after the previous step, and the scroll end before the next one.
+                    waitBeforeMs = SWIPE_WAIT_BEFORE_MS, waitAfterMs = SWIPE_WAIT_AFTER_MS,
+                )
                 is Step.Position -> Click(
                     id = newId(), eventId = eventId, name = "${index + 1}. (${step.x}, ${step.y})",
                     priority = actions.size, pressDuration = POSITION_PRESS_DURATION_MS,
@@ -234,10 +410,21 @@ object TapRecorder {
     }
 
     private fun AccessibilityEvent.toStep(): Step? {
-        val node = source
         // The event text holds the texts of all the children of the clicked view (e.g. title + summary of a list
         // row): only use it when it is a single text, joined texts can't be found on screen when playing.
         val eventText = text.singleOrNull()?.toString()?.trim().orEmpty()
+        val node = source
+        if (node == null) {
+            if (eventText.isUsableText()) return Step.Element(TapElement.SelectorType.TEXT_EXACT, eventText, eventText)
+            val desc = contentDescription?.toString()?.trim().orEmpty()
+            if (desc.isNotEmpty()) return Step.Element(TapElement.SelectorType.CONTENT_DESCRIPTION, desc, desc)
+            return null
+        }
+        return node.toStep(eventText)
+    }
+
+    private fun AccessibilityNodeInfo.toStep(eventText: String): Step? {
+        val node: AccessibilityNodeInfo? = this
 
         val nodeText = node?.text?.toString()?.trim().orEmpty().ifEmpty { eventText }
         if (nodeText.isUsableText()) return Step.Element(TapElement.SelectorType.TEXT_EXACT, nodeText, nodeText)
@@ -246,7 +433,7 @@ object TapRecorder {
             return Step.Element(TapElement.SelectorType.RESOURCE_ID, id, id.substringAfter(":id/"))
         }
 
-        val desc = node?.contentDescription?.toString()?.trim().orEmpty().ifEmpty { contentDescription?.toString()?.trim().orEmpty() }
+        val desc = node?.contentDescription?.toString()?.trim().orEmpty()
         if (desc.isNotEmpty()) return Step.Element(TapElement.SelectorType.CONTENT_DESCRIPTION, desc, desc)
 
         node?.findChildText()?.let { childText ->
@@ -275,11 +462,18 @@ object TapRecorder {
     private fun String.isUsableText(): Boolean = isNotEmpty() && length <= TEXT_MAX_LENGTH
 
     private fun restoreServiceInfo() {
+        observingTouches = false
+        touchesSeen = false
+        touchDown = null
         val service = serviceRef?.get() ?: return
         // Only remove the event types added for the recording: other flags may have changed meanwhile.
         service.serviceInfo?.let { info ->
             info.eventTypes = originalEventTypes
             info.flags = originalFlags
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                info.observedMotionEventSources = originalObservedMotionSources
+                info.motionEventSources = originalMotionSources
+            }
             service.serviceInfo = info
         }
     }
@@ -342,7 +536,17 @@ private val SYSTEM_OVERLAY_PACKAGES = setOf(
     "com.samsung.android.app.smartcapture",
 )
 private val SYSTEM_OVERLAY_PREFIXES = listOf("com.samsung.android.samsungpass", "com.samsung.android.biometrics")
-private const val RECORDED_EVENT_TYPES = AccessibilityEvent.TYPE_VIEW_CLICKED or AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+private const val RECORDED_EVENT_TYPES = AccessibilityEvent.TYPE_VIEW_CLICKED or AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+    AccessibilityEvent.TYPE_VIEW_SCROLLED
+private const val TAP_SLOP_DP = 12f
+private const val TREE_MAX_DEPTH = 60
+private const val SWIPE_MIN_DURATION_MS = 100L
+private const val SWIPE_MAX_DURATION_MS = 2_000L
+private const val SWIPE_WAIT_BEFORE_MS = 1_000L
+private const val SWIPE_WAIT_AFTER_MS = 800L
+private const val SCROLL_SWIPE_DURATION_MS = 400L
+private const val SCROLL_MERGE_MS = 700L
+private const val MIN_SCROLL_VIEW_SIZE = 100
 private const val TEXT_MAX_LENGTH = 40
 private const val NAME_MAX_LENGTH = 50
 private const val CHILD_TEXT_MAX_DEPTH = 4
