@@ -364,10 +364,50 @@ object TapRecorder {
         val node = root.deepestAt(x, y)
         // A text found only once on the screen first: the same text elsewhere (a price, a "HOT" label) would be tapped
         // instead when playing. Then the element itself, and without a text or an id, the touched point.
-        val step = touched?.uniqueTextStep(root, screenHeight())
-            ?: node?.toStep("")?.takeIf { it is Step.Element }
-            ?: Step.Position(x, y)
+        val unique = touched?.uniqueTextStep(root, screenHeight())
+        val byNode = node?.toStep("")?.takeIf { it is Step.Element }
+        val step = unique?.takeUnless { it.value.isValueLike() }
+            ?: byNode?.takeUnless { (it as Step.Element).value.isValueLike() }
+            // Only a price or a number under the finger: the name of the item next to it (usually just above).
+            ?: root.nameNear(x, y)
+            ?: unique ?: byNode ?: Step.Position(x, y)
+        Log.d(TAG, "Target at $x,$y: touched=${touched?.debugText()} parent=${touched?.parent?.debugText()} " +
+            "unique=$unique byNode=$byNode -> $step")
         return TouchTarget(pkg, step, touched ?: node)
+    }
+
+    private fun AccessibilityNodeInfo.debugText(): String =
+        "${className?.toString()?.substringAfterLast('.')}('${text ?: contentDescription ?: ""}' " +
+            "${Rect().also(::getBoundsInScreen).toShortString()} children=$childCount)"
+
+    /**
+     * The closest name (not a price or a number) shown in the same column as the point and at most a row above or a
+     * little below it, found by position only.
+     */
+    private fun AccessibilityNodeInfo.nameNear(x: Int, y: Int): Step.Element? {
+        val density = serviceRef?.get()?.resources?.displayMetrics?.density ?: 2f
+        val above = (NAME_SEARCH_ABOVE_DP * density).toInt()
+        val below = (NAME_SEARCH_BELOW_DP * density).toInt()
+        var best: String? = null
+        var bestDistance = Int.MAX_VALUE
+        walk { node ->
+            val text = node.selectorTexts().firstOrNull { !it.isValueLike() } ?: return@walk
+            if (!node.isVisibleToUser) return@walk
+            val bounds = Rect().also(node::getBoundsInScreen)
+            if (bounds.isEmpty || x < bounds.left - above || x > bounds.right + above) return@walk
+            if (bounds.height() > above * 2) return@walk
+            val distance = when {
+                y in bounds.top..bounds.bottom -> 0
+                bounds.bottom < y -> y - bounds.bottom
+                else -> bounds.top - y
+            }
+            val allowed = if (bounds.bottom < y) above else below
+            if (distance <= allowed && distance < bestDistance) {
+                best = text
+                bestDistance = distance
+            }
+        }
+        return best?.let { Step.Element(TapElement.SelectorType.TEXT_EXACT, it, it) }
     }
 
     /**
@@ -800,6 +840,8 @@ private const val NAME_MAX_LENGTH = 50
 private const val CHILD_TEXT_MAX_DEPTH = 4
 private const val CLICK_AFTER_TAP_MS = 1_500L
 private const val UNIQUE_TEXT_MAX_CLIMB = 8
+private const val NAME_SEARCH_ABOVE_DP = 56f
+private const val NAME_SEARCH_BELOW_DP = 12f
 private val VALUE_UNITS = setOf("원", "won", "krw", "usd", "kcal", "ml", "g", "개", "잔", "p", "pt", "점")
 private const val MAX_ITEM_SCREEN_RATIO = 0.3f
 private const val WALK_MAX_NODES = 4_000
