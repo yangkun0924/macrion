@@ -10,7 +10,6 @@ import android.graphics.Point
 import android.graphics.Rect
 import android.os.Build
 import android.os.SystemClock
-import android.view.InputDevice
 import android.view.MotionEvent
 import android.provider.Settings
 import android.util.Log
@@ -72,11 +71,11 @@ object TapRecorder {
     private val steps = mutableListOf<Step>()
 
     /**
-     * Android 15+: the touches themselves are observed (not consumed), so taps and swipes are recorded in any app,
+     * The touches themselves are seen through [TouchPassThroughOverlay], so taps and swipes are recorded in any app,
      * web pages included, which often don't report their clicks to accessibility services.
      */
     private var observingTouches = false
-    private var originalMotionSources = 0
+    private var touchOverlay: TouchPassThroughOverlay? = null
     private var touchDown: TouchDown? = null
     private var lastScrollStepMs = 0L
     private var lastScrollForward: Boolean? = null
@@ -127,14 +126,9 @@ object TapRecorder {
         info.eventTypes = info.eventTypes or RECORDED_EVENT_TYPES
         info.flags = info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
             AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            originalMotionSources = info.motionEventSources
-            info.motionEventSources = info.motionEventSources or InputDevice.SOURCE_TOUCHSCREEN
-            // Observed only: the touches still reach the apps. No getter for it, nothing else sets it.
-            info.setObservedMotionEventSources(InputDevice.SOURCE_TOUCHSCREEN)
-        }
         service.serviceInfo = info
-        observingTouches = Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM
+        touchOverlay = TouchPassThroughOverlay(service, ::onMotionEvent)
+        observingTouches = touchOverlay?.show() == true
         touchDown = null
         lastScrollStepMs = 0L
         lastScrollForward = null
@@ -173,12 +167,11 @@ object TapRecorder {
     }
 
     /**
-     * Called with the observed touches on Android 15+. A touch that barely moves is a tap on the element under the
+     * Called with the touches seen by [TouchPassThroughOverlay]. A touch that barely moves is a tap on the element under the
      * finger, found when the finger goes down (the screen changes right after the tap). Other touches are swipes.
      */
     fun onMotionEvent(event: MotionEvent) {
         if (!_isRecording.value || !observingTouches) return
-        if (!event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN)) return
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 touchesSeen = true
@@ -224,7 +217,7 @@ object TapRecorder {
         val service = serviceRef?.get() ?: return null
         val windows = try { service.windows } catch (_: Exception) { null } ?: return null
         val window = windows
-            .filter { Rect().also(it::getBoundsInScreen).contains(x, y) }
+            .filter { it.type != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY && Rect().also(it::getBoundsInScreen).contains(x, y) }
             .maxByOrNull { it.layer } ?: return null
         if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION) {
             Log.d(TAG, "Touch in window of type ${window.type}, ignored")
@@ -270,7 +263,7 @@ object TapRecorder {
     private fun distance(x1: Float, y1: Float, x2: Float, y2: Float): Float =
         kotlin.math.hypot((x2 - x1).toDouble(), (y2 - y1).toDouble()).toFloat()
 
-    /** Without the touches (before Android 15), a scrolled list or page becomes a swipe over it. */
+    /** Without the touches (the recorder window can't be shown), a scrolled list or page becomes a swipe over it. */
     private fun onScrolled(event: AccessibilityEvent, pkg: String) {
         if (!event.isInApplicationWindow()) return
         val node = event.source ?: return
@@ -461,6 +454,8 @@ object TapRecorder {
     private fun String.isUsableText(): Boolean = isNotEmpty() && length <= TEXT_MAX_LENGTH
 
     private fun restoreServiceInfo() {
+        touchOverlay?.hide()
+        touchOverlay = null
         observingTouches = false
         touchesSeen = false
         touchDown = null
@@ -469,10 +464,6 @@ object TapRecorder {
         service.serviceInfo?.let { info ->
             info.eventTypes = originalEventTypes
             info.flags = originalFlags
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                info.setObservedMotionEventSources(0)
-                info.motionEventSources = originalMotionSources
-            }
             service.serviceInfo = info
         }
     }
