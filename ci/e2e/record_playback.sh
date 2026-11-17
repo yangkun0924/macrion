@@ -64,7 +64,7 @@ top_package() {
 }
 
 log "install $APK"
-adb root >/dev/null 2>&1; adb wait-for-device
+adb root >/dev/null 2>&1; sleep 5; adb wait-for-device
 adb install -r -g "$APK" || fail "install"
 adb shell settings put secure enabled_accessibility_services "$SVC"
 adb shell settings put secure accessibility_enabled 1
@@ -73,7 +73,13 @@ adb shell settings put global heads_up_notifications_enabled 0
 for _ in 1 2 3 4 5 6 7 8 9 10; do
   sleep 3
   adb shell dumpsys accessibility | grep -q "$PKG" && break
+  # adbd restarts after "adb root": the settings may not have been written.
+  adb wait-for-device
+  adb shell settings put secure enabled_accessibility_services "$SVC"
+  adb shell settings put secure accessibility_enabled 1
+  adb shell appops set $PKG SYSTEM_ALERT_WINDOW allow
 done
+adb shell settings get secure enabled_accessibility_services
 adb shell dumpsys accessibility | grep -q "$PKG" || fail "accessibility service not bound"
 log "accessibility service enabled"
 
