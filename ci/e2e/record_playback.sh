@@ -300,8 +300,11 @@ if [ -n "$WEB_APK" ]; then
   adb shell dumpsys notification --noredact | grep -q "Recording your taps" || fail "web recording notification not shown"
   adb shell monkey -p $WEB -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
   sleep 4; adb shell input tap $WP1; sleep 6; echo "after web tap 1: $(focused_window)"; adb shell input tap $WP2; sleep 2
-  for _ in 1 2 3 4 5 6 7 8; do adb shell input swipe $SWIPE; sleep 1; done
-  adb shell input tap $WP3; sleep 2; shot "web_recorded_end"
+  for _ in 1 2 3 4 5 6 7; do adb shell input swipe $SWIPE; sleep 1; done
+  # Last swipe is a quick flick and the tap comes right after it, while the page may still be moving: the recorder
+  # must record the item really tapped.
+  adb shell input swipe $((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 4)) 120
+  adb shell input tap $WP3; sleep 4; shot "web_recorded_end"
   adb shell am start -n "$PKG/io.github.vibhor1102.macrion.recorder.RecorderActionActivity" -a io.github.vibhor1102.macrion.recorder.STOP | tee -a "$RESULT"
   sleep 5; dump "web_after_save"
   if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(add automatically|add|add to home screen)$"); then adb shell input tap $pos; sleep 2; fi

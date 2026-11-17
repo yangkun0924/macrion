@@ -25,6 +25,8 @@ import android.view.WindowManager
 internal class TouchPassThroughOverlay(
     private val service: AccessibilityService,
     private val onTouch: (MotionEvent) -> Unit,
+    /** Called once the finger is up, before the touch is replayed: call the given function to replay it. */
+    private val beforeReplay: (replay: () -> Unit) -> Unit,
 ) {
 
     private val windowManager = service.getSystemService(WindowManager::class.java)
@@ -140,8 +142,11 @@ internal class TouchPassThroughOverlay(
             }
             MotionEvent.ACTION_UP -> {
                 points.add(Triple(event.rawX, event.rawY, event.eventTime))
-                forward(points.toList())
+                val gesture = points.toList()
                 points.clear()
+                // No other touch is taken until this one is replayed.
+                forwarding = true
+                beforeReplay { if (view != null) forward(gesture) }
             }
             MotionEvent.ACTION_CANCEL -> points.clear()
         }

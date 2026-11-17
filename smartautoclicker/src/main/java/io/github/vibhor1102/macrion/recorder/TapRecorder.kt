@@ -141,7 +141,7 @@ object TapRecorder {
         info.flags = info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
             AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         service.serviceInfo = info
-        touchOverlay = TouchPassThroughOverlay(service, ::onMotionEvent)
+        touchOverlay = TouchPassThroughOverlay(service, ::onMotionEvent, ::beforeTouchReplay)
         observingTouches = touchOverlay?.show() == true
         touchDown = null
         lastScrollStepMs = 0L
@@ -158,6 +158,7 @@ object TapRecorder {
         if (!_isRecording.value || event == null) return
         val pkg = event.packageName?.toString() ?: return
         Log.d(TAG, "Event ${AccessibilityEvent.eventTypeToString(event.eventType)} from $pkg")
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) lastScrollEventMs = SystemClock.uptimeMillis()
         if (observingTouches && event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) updateTouchCapture()
         if (pkg in ignoredPackages || pkg.isSystemOverlayPackage()) return
 
@@ -202,7 +203,7 @@ object TapRecorder {
                 val down = touchDown ?: return
                 touchDown = null
                 down.maxDistance = maxOf(down.maxDistance, distance(down.x, down.y, event.rawX, event.rawY))
-                onTouchEnded(down, event.rawX, event.rawY)
+                endedTouch = EndedTouch(down, event.rawX, event.rawY, SystemClock.uptimeMillis())
             }
             MotionEvent.ACTION_CANCEL -> touchDown = null
         }
@@ -210,9 +211,56 @@ object TapRecorder {
 
     private var touchesSeen = false
 
-    private fun onTouchEnded(down: TouchDown, upX: Float, upY: Float) {
-        Log.d(TAG, "Touch ended, moved ${down.maxDistance}px, target ${down.target?.pkg}")
-        val target = down.target ?: return Unit.also { Log.d(TAG, "Touch ignored: not in a recorded app") }
+    private class EndedTouch(val down: TouchDown, val upX: Float, val upY: Float, val upTimeMs: Long)
+    private var endedTouch: EndedTouch? = null
+    private var lastScrollEventMs = 0L
+
+    /**
+     * Called by [TouchPassThroughOverlay] once the finger is up. A swipe is recorded and replayed right away. A tap
+     * waits for the screen to stop moving first (the list or web page may still be scrolling from the previous swipe,
+     * and the touch replayed on it lands on whatever is there by then): the element recorded is the one really tapped.
+     */
+    private fun beforeTouchReplay(replay: () -> Unit) {
+        val touch = endedTouch
+        endedTouch = null
+        if (touch == null || !_isRecording.value) return replay()
+        val slop = serviceRef?.get()?.resources?.displayMetrics?.density?.times(TAP_SLOP_DP) ?: 24f
+        val isTap = touch.down.maxDistance <= slop
+        if (!isTap || touch.down.target == null || touch.down.multiTouch) {
+            onTouchEnded(touch.down, touch.upX, touch.upY, touch.upTimeMs, touch.down.target)
+            return replay()
+        }
+
+        val startMs = SystemClock.uptimeMillis()
+        var previous: TouchTarget? = touch.down.target
+        val check = object : Runnable {
+            override fun run() {
+                if (!_isRecording.value) return replay()
+                val now = SystemClock.uptimeMillis()
+                val current = targetAt(touch.down.x.toInt(), touch.down.y.toInt())
+                val still = now - lastScrollEventMs >= SCROLL_SETTLE_MS && current?.step == previous?.step
+                if (still || now - startMs >= MAX_SETTLE_WAIT_MS) {
+                    if (now - startMs > SETTLE_CHECK_PERIOD_MS) Log.d(TAG, "Screen settled after ${now - startMs} ms")
+                    onTouchEnded(touch.down, touch.upX, touch.upY, touch.upTimeMs, current ?: touch.down.target)
+                    replay()
+                } else {
+                    previous = current
+                    warmUpHandler.postDelayed(this, SETTLE_CHECK_PERIOD_MS)
+                }
+            }
+        }
+        // A screen that was not scrolling is read once more only: a tap stays quick.
+        if (startMs - lastScrollEventMs >= SCROLL_SETTLE_MS && startMs - lastStepEndMs >= RECENT_SWIPE_MS) {
+            onTouchEnded(touch.down, touch.upX, touch.upY, touch.upTimeMs, touch.down.target)
+            replay()
+        } else {
+            warmUpHandler.postDelayed(check, SETTLE_CHECK_PERIOD_MS)
+        }
+    }
+
+    private fun onTouchEnded(down: TouchDown, upX: Float, upY: Float, upTimeMs: Long, target: TouchTarget?) {
+        Log.d(TAG, "Touch ended, moved ${down.maxDistance}px, target ${target?.pkg}")
+        if (target == null) return Unit.also { Log.d(TAG, "Touch ignored: not in a recorded app") }
         if (down.multiTouch) return Unit.also { Log.d(TAG, "Touch ignored: several fingers") }
         val slop = serviceRef?.get()?.resources?.displayMetrics?.density?.times(TAP_SLOP_DP) ?: 24f
 
@@ -225,7 +273,7 @@ object TapRecorder {
         } else {
             Step.Drag(
                 down.x.toInt(), down.y.toInt(), upX.toInt(), upY.toInt(),
-                (SystemClock.uptimeMillis() - down.timeMs).coerceIn(SWIPE_MIN_DURATION_MS, SWIPE_MAX_DURATION_MS),
+                (upTimeMs - down.timeMs).coerceIn(SWIPE_MIN_DURATION_MS, SWIPE_MAX_DURATION_MS),
                 waitMs,
             )
         }
@@ -525,6 +573,7 @@ object TapRecorder {
         warmUpHandler.removeCallbacks(warmUp)
         touchOverlay?.hide()
         touchOverlay = null
+        endedTouch = null
         observingTouches = false
         touchesSeen = false
         touchDown = null
@@ -598,6 +647,10 @@ private val SYSTEM_OVERLAY_PREFIXES = listOf("com.samsung.android.samsungpass", 
 private const val RECORDED_EVENT_TYPES = AccessibilityEvent.TYPE_VIEW_CLICKED or AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
     AccessibilityEvent.TYPE_VIEW_SCROLLED
 private const val TAP_SLOP_DP = 12f
+private const val SCROLL_SETTLE_MS = 350L
+private const val SETTLE_CHECK_PERIOD_MS = 150L
+private const val MAX_SETTLE_WAIT_MS = 3_000L
+private const val RECENT_SWIPE_MS = 2_500L
 private const val MIN_STEP_WAIT_MS = 500L
 private const val MAX_STEP_WAIT_MS = 15_000L
 private const val WARM_UP_PERIOD_MS = 1_000L
