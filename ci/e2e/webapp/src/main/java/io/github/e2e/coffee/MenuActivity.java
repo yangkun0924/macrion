@@ -13,6 +13,13 @@ public class MenuActivity extends Activity {
         web.getSettings().setJavaScriptEnabled(true);
         web.setWebViewClient(new WebViewClient());
         setContentView(web);
-        web.loadUrl("file:///android_asset/menu.html");
+        try (java.io.InputStream in = getAssets().open("menu.html")) {
+            byte[] bytes = new byte[in.available()];
+            int read = 0;
+            while (read < bytes.length) read += in.read(bytes, read, bytes.length - read);
+            web.loadDataWithBaseURL("https://e2e.invalid/", new String(bytes, "UTF-8"), "text/html", "UTF-8", null);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -248,8 +248,17 @@ if [ -n "$WEB_APK" ]; then
   adb shell monkey -p $WEB -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
   sleep 4; dump "web_find_home"
   WP1=$(pos_in "$LAST" "^order menu$") || fail "web app 'Order menu' button not found"
-  adb shell input tap $WP1; sleep 6; dump "web_find_menu"
-  WP2=$(pos_in "$LAST" "^coffee$") || fail "web page 'Coffee' tab not found"
+  adb shell input tap $WP1; sleep 4
+  WP2=""
+  for _ in 1 2 3 4 5 6 7 8; do
+    dump "web_find_menu"
+    WP2=$(pos_in "$LAST" "^coffee$") && break
+    sleep 4
+  done
+  if [ -z "$WP2" ]; then
+    adb logcat -d | grep -iE "chromium|webview|cr_|e2e.coffee|AndroidRuntime" | tail -40
+    fail "web page 'Coffee' tab not found"
+  fi
   adb shell input tap $WP2; sleep 2
   for _ in 1 2 3 4 5 6 7 8; do adb shell input swipe $SWIPE; sleep 1; done
   dump "web_find_bottom"
