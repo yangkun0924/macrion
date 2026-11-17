@@ -39,6 +39,7 @@ import io.github.vibhor1102.macrion.feature.smart.config.ui.scenario.triggereven
 
 import android.app.Dialog
 
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -113,6 +114,9 @@ class ScenarioDialog(
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 launch { viewModel.isEditingScenario.collect(::onScenarioEditingStateChanged) }
             }
+        }
+        lifecycleScope.launch {
+            if (viewModel.opensOnTriggerEvents.first()) selectNavigationItem(R.id.page_trigger_events)
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {

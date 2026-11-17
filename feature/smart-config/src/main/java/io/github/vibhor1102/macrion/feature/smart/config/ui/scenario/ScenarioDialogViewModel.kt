@@ -64,6 +64,17 @@ class ScenarioDialogViewModel @Inject constructor(
         }
     }
 
+    /**
+     * True when the scenario only has trigger events (e.g. a recorded scenario): the dialog then opens on them instead
+     * of an empty screen events list. Only the first value is used.
+     */
+    val opensOnTriggerEvents: Flow<Boolean> = combine(
+        editionRepository.editionState.editedScreenEventsState.filterNotNull(),
+        editionRepository.editionState.editedTriggerEventsState.filterNotNull(),
+    ) { imageEventsState, triggerEventsState ->
+        imageEventsState.value.isNullOrEmpty() && !triggerEventsState.value.isNullOrEmpty()
+    }
+
     /** Tells if the user is currently editing a scenario. If that's not the case, dialog should be closed. */
     val isEditingScenario: Flow<Boolean> = editionRepository.isEditingScenario
         .distinctUntilChanged()
