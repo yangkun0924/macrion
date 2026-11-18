@@ -115,6 +115,8 @@
     <string name="settings_section_about">정보</string>
     <string name="settings_version_title">버전</string>
     <string name="settings_install_source_title">설치 경로</string>
+    <string name="settings_open_source_title">오픈소스 고지</string>
+    <string name="settings_open_source_value">Macrion(Vibhor Goel)과 Klick\'r(Kevin Buzeau)를 바탕으로 만든 앱이에요. GPL-3.0 라이선스를 따릅니다. 소스: github.com/yangkun0924/macrion</string>
     <string name="install_source_unknown">알 수 없음</string>
     <string name="settings_toolbar_size_title">툴바 크기</string>
     <string name="settings_toolbar_size_dialog_description">오버레이 툴바 크기를 조절해요.</string>

@@ -81,23 +81,10 @@ import io.github.vibhor1102.macrion.core.ui.compose.MacrionActionField
 import io.github.vibhor1102.macrion.core.ui.compose.MacrionSwitchField
 import io.github.vibhor1102.macrion.core.ui.compose.MacrionTheme
 
-private fun groupedListItemShape(index: Int, itemCount: Int): Shape = when {
-    itemCount == 1 -> RoundedCornerShape(16.dp)
-    index == 0 -> RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
-    index == itemCount - 1 -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp)
-    else -> RoundedCornerShape(4.dp)
-}
-
 @Composable
 internal fun SettingsRoute(
     viewModel: SettingsViewModel,
     onNavigateBack: () -> Unit,
-    onShowPrivacySettings: () -> Unit,
-    onShowPurchase: () -> Unit,
-    onShowCrashReports: () -> Unit,
-    onOpenGithub: () -> Unit,
-    onJoinDiscord: () -> Unit,
-    onReportBug: () -> Unit,
 ) {
     val isScenarioFiltersEnabled by viewModel.isScenarioFiltersUiEnabled.collectAsStateWithLifecycle(false)
     val isScenarioSwitcherEnabled by viewModel.isScenarioSwitcherEnabled.collectAsStateWithLifecycle(false)
@@ -108,8 +95,6 @@ internal fun SettingsRoute(
     val isInputWorkaroundEnabled by viewModel.isInputWorkaroundEnabled.collectAsStateWithLifecycle(false)
     val shouldShowEntireScreenCapture by viewModel.shouldShowEntireScreenCapture.collectAsStateWithLifecycle(false)
     val shouldShowInputBlockWorkaround by viewModel.shouldShowInputBlockWorkaround.collectAsStateWithLifecycle(false)
-    val shouldShowPrivacySettings by viewModel.shouldShowPrivacySettings.collectAsStateWithLifecycle(false)
-    val shouldShowPurchase by viewModel.shouldShowPurchase.collectAsStateWithLifecycle(false)
     val toolbarScalePercent by viewModel.toolbarScalePercent.collectAsStateWithLifecycle(100)
     val isToolbarAutoHideEnabled by viewModel.isToolbarAutoHideEnabled.collectAsStateWithLifecycle(false)
     val allowPreviewHandleEditing by viewModel.allowPreviewHandleEditing.collectAsStateWithLifecycle(true)
@@ -162,6 +147,10 @@ internal fun SettingsRoute(
             SettingsItem.Info(
                 title = R.string.settings_install_source_title,
                 value = installationSource.getLabel(context),
+            ),
+            SettingsItem.Info(
+                title = R.string.settings_open_source_title,
+                value = stringResource(R.string.settings_open_source_value),
             ),
         ),
     )
@@ -228,16 +217,11 @@ internal fun SettingsRoute(
                     if (shouldShowEntireScreenCapture) add(SettingsItem.Switch(R.string.field_force_entire_screen_title, R.string.field_force_entire_screen_desc, isEntireScreenCaptureForced, viewModel::toggleForceEntireScreenCapture))
                     if (shouldShowInputBlockWorkaround) add(SettingsItem.Switch(R.string.field_input_block_workaround_title, R.string.field_input_block_workaround_desc, isInputWorkaroundEnabled, viewModel::toggleInputBlockWorkaround))
                 }.takeIf { it.isNotEmpty() }?.let { add(SettingsSection(R.string.settings_section_device_compatibility, it)) }
-                buildList {
-                    if (shouldShowPrivacySettings) add(SettingsItem.Action(R.string.field_privacy, onShowPrivacySettings))
-                    if (shouldShowPurchase) add(SettingsItem.Action(R.string.field_remove_ads, onShowPurchase))
-                }.takeIf { it.isNotEmpty() }?.let { add(SettingsSection(R.string.settings_section_account, it)) }
                 add(
                     SettingsSection(
                         R.string.settings_section_help,
                         listOf(
                             SettingsItem.Action(R.string.field_troubleshooting) { showTroubleshooting = true },
-                            SettingsItem.Action(R.string.crash_reports_title, onShowCrashReports),
                         ),
                     ),
                 )
@@ -295,9 +279,6 @@ internal fun SettingsRoute(
             },
             aboutSection = aboutSection,
             onNavigateBack = onNavigateBack,
-            onOpenGithub = onOpenGithub,
-            onJoinDiscord = onJoinDiscord,
-            onReportBug = onReportBug,
         )
 
         if (showTroubleshooting) {
@@ -392,9 +373,6 @@ private fun SettingsScreen(
     sections: List<SettingsSection>,
     aboutSection: SettingsSection,
     onNavigateBack: () -> Unit,
-    onOpenGithub: () -> Unit,
-    onJoinDiscord: () -> Unit,
-    onReportBug: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -419,13 +397,6 @@ private fun SettingsScreen(
                 item {
                     SettingsSection(section)
                 }
-            }
-            item {
-                SupportCards(
-                    onOpenGithub = onOpenGithub,
-                    onJoinDiscord = onJoinDiscord,
-                    onReportBug = onReportBug,
-                )
             }
             item {
                 SettingsSection(aboutSection)
@@ -533,56 +504,6 @@ private fun SettingsSection(section: SettingsSection) {
                     Spacer(Modifier.height(4.dp))
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SupportCards(onOpenGithub: () -> Unit, onJoinDiscord: () -> Unit, onReportBug: () -> Unit) {
-    Text(
-        text = stringResource(R.string.settings_support_title),
-        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
-        color = MaterialTheme.colorScheme.primary,
-        style = MaterialTheme.typography.titleSmall,
-    )
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-        SupportCard(stringResource(R.string.settings_github), R.drawable.ic_github, onOpenGithub, groupedListItemShape(0, 3))
-        Spacer(Modifier.height(4.dp))
-        SupportCard(stringResource(R.string.settings_discord), R.drawable.ic_discord, onJoinDiscord, groupedListItemShape(1, 3))
-        Spacer(Modifier.height(4.dp))
-        SupportCard(stringResource(R.string.settings_report_bug), R.drawable.ic_bug_report, onReportBug, groupedListItemShape(2, 3))
-    }
-}
-
-@Composable
-private fun SupportCard(
-    title: String,
-    icon: Int,
-    onClick: () -> Unit,
-    shape: Shape,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = shape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(Modifier.width(16.dp))
-            Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-            Icon(
-                painter = painterResource(R.drawable.ic_chevron_right),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

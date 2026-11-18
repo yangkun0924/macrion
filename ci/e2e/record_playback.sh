@@ -341,5 +341,26 @@ if [ -n "$WEB_APK" ]; then
   log "[web] OK: recorded and ordered by the playback"
 fi
 
+# Settings: the "Support" area (GitHub, Discord, bug report) and the crash reports page must be gone, and the
+# open source notice must be shown in "About".
+adb shell input keyevent KEYCODE_HOME; sleep 2
+adb shell am start -n "$PKG/io.github.vibhor1102.macrion.settings.SettingsActivity" | tee -a "$RESULT"
+sleep 4
+: > "$OUT/settings_texts.txt"
+for i in 1 2 3 4 5 6; do
+  dump "settings_$i"
+  python3 "$HERE/ui.py" texts "$LAST" >> "$OUT/settings_texts.txt"
+  adb shell input swipe 500 1600 500 400 300; sleep 2
+done
+# ui.py texts prints "<text> <resource-id> <bounds>": match the whole text only.
+END=' +([^ ]+:id/[^ ]+ +)?\['
+BANNED="^(support|visit github|join the discord server|report a bug|local crash reports)$END"
+if grep -qiE "$BANNED" "$OUT/settings_texts.txt"; then
+  fail "[settings] a support item is still shown: $(grep -iE "$BANNED" "$OUT/settings_texts.txt" | head -3 | tr '\n' ' ')"
+fi
+grep -qiE "^open source notice$END" "$OUT/settings_texts.txt" || fail "[settings] the open source notice is missing"
+grep -qiE "^troubleshooting$END" "$OUT/settings_texts.txt" || log "WARNING: troubleshooting item not seen"
+log "[settings] OK: no support area, open source notice shown"
+
 adb logcat -d > "$OUT/logcat.txt"
 log "PASS"

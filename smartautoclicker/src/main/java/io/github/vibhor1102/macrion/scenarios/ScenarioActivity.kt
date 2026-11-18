@@ -29,7 +29,6 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.withResumed
-import io.github.vibhor1102.macrion.crash.crashReportStore
 import io.github.vibhor1102.macrion.core.base.crash.CrashDiagnostics
 import io.github.vibhor1102.macrion.feature.backup.ui.BackupViewModel
 import io.github.vibhor1102.macrion.scenarios.creation.ScenarioCreationViewModel
@@ -83,8 +82,6 @@ class ScenarioActivity : ComponentActivity() {
     private var requestedItem: ScenarioListUiState.Item.ScenarioItem? = null
     private var startupHelpChecked = false
     private var startupCheckJob: Job? = null
-    private var checkingCrashReport = false
-    private var crashPromptOffered = false
     private val startupConsentFinished = CompletableDeferred<Unit>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -104,7 +101,6 @@ class ScenarioActivity : ComponentActivity() {
             conditionsMigrationViewModel = conditionsMigrationViewModel,
             permissionsController = scenarioViewModel.permissionController,
             onLaunchScenario = ::launchScenario,
-            onDialogDismissed = { window.decorView.post { offerLocalCrashReport() } },
         )
         setContent {
             scenarioListHost.Content()
@@ -137,34 +133,7 @@ class ScenarioActivity : ComponentActivity() {
             lifecycle.withResumed {
                 if (needsHelp) showLocalePluginBackgroundLaunchHelp()
                 startupHelpChecked = true
-                if (!needsHelp) offerLocalCrashReport()
             }
-        }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) offerLocalCrashReport()
-    }
-
-    private fun canOfferCrashReport() = startupHelpChecked && !crashPromptOffered &&
-        !isFinishing && requestedItem == null && hasWindowFocus() &&
-        lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
-        !scenarioListHost.hasActiveDialog()
-
-    private fun offerLocalCrashReport() {
-        if (checkingCrashReport || !canOfferCrashReport()) return
-        checkingCrashReport = true
-        lifecycleScope.launch {
-            try {
-                val store = applicationContext.crashReportStore()
-                val report = withContext(Dispatchers.IO) { runCatching { store.pending().firstOrNull { !it.prompted } }.getOrNull() }
-                if (report != null && canOfferCrashReport()) {
-                    crashPromptOffered = true
-                    scenarioListHost.showCrashReportDialog(report.id)
-                    withContext(Dispatchers.IO) { runCatching { store.markPrompted(report.id) } }
-                }
-            } finally { checkingCrashReport = false }
         }
     }
 

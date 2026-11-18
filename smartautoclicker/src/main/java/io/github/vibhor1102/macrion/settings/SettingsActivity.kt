@@ -18,16 +18,11 @@
 package io.github.vibhor1102.macrion.settings
 
 import android.os.Bundle
-import android.content.Intent
-import android.os.Build
-import io.github.vibhor1102.macrion.crash.CrashReportsActivity
 import io.github.vibhor1102.macrion.core.base.crash.CrashDiagnostics
-import io.github.vibhor1102.macrion.BuildConfig
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.core.net.toUri
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -43,32 +38,7 @@ class SettingsActivity : ComponentActivity() {
             SettingsRoute(
                 viewModel = viewModel,
                 onNavigateBack = ::finish,
-                onShowPrivacySettings = { viewModel.showPrivacySettings(this) },
-                onShowPurchase = { viewModel.showPurchaseActivity(this) },
-                onShowCrashReports = { startActivity(Intent(this, CrashReportsActivity::class.java)) },
-                onOpenGithub = { openUrl(GITHUB_URL) },
-                onJoinDiscord = { openUrl(DISCORD_URL) },
-                onReportBug = { openUrl(createBugReportUrl()) },
             )
         }
-    }
-
-    private fun openUrl(url: String) {
-        startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
-    }
-
-    private fun createBugReportUrl(): String = BUG_REPORT_URL.toUri().buildUpon()
-        .appendQueryParameter("template", BUG_REPORT_TEMPLATE)
-        .appendQueryParameter("app-version", BuildConfig.VERSION_NAME)
-        .appendQueryParameter("device-type", "${Build.MANUFACTURER} ${Build.MODEL}".trim())
-        .appendQueryParameter("android-version", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-        .build()
-        .toString()
-
-    private companion object {
-        const val GITHUB_URL = "https://github.com/vibhor1102/macrion"
-        const val DISCORD_URL = "https://discord.gg/g3RpJxtWFZ"
-        const val BUG_REPORT_URL = "https://github.com/vibhor1102/macrion/issues/new"
-        const val BUG_REPORT_TEMPLATE = "bug_report.yml"
     }
 }

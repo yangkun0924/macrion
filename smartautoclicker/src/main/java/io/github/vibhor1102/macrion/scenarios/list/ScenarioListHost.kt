@@ -57,7 +57,6 @@ import io.github.vibhor1102.macrion.core.common.quality.ui.AccessibilityTroubles
 import io.github.vibhor1102.macrion.core.common.quality.ui.BackgroundLaunchTroubleshootingDialog
 import io.github.vibhor1102.macrion.core.ui.compose.MacrionDialogSurface
 import io.github.vibhor1102.macrion.core.ui.compose.MacrionTheme
-import io.github.vibhor1102.macrion.crash.CrashReportFlow
 import io.github.vibhor1102.macrion.feature.backup.ui.BackupDialog
 import io.github.vibhor1102.macrion.feature.externallaunch.shortcut.ScenarioShortcuts
 import io.github.vibhor1102.macrion.feature.backup.ui.BackupViewModel
@@ -83,7 +82,6 @@ sealed interface ActiveScenarioDialog {
         val dumbScenariosToBackup: Collection<Long>? = null,
     ) : ActiveScenarioDialog
     data object ConditionsMigration : ActiveScenarioDialog
-    data class CrashReport(val reportId: String) : ActiveScenarioDialog
     data object BackgroundLaunchHelp : ActiveScenarioDialog
     data class AccessibilityTroubleshooting(val onDismissed: () -> Unit) : ActiveScenarioDialog
 }
@@ -115,10 +113,6 @@ class ScenarioListHost(
     fun hasActiveDialog(): Boolean = activeDialog != null
 
     fun isShowingBackgroundLaunchHelp(): Boolean = activeDialog == ActiveScenarioDialog.BackgroundLaunchHelp
-
-    fun showCrashReportDialog(reportId: String) {
-        activeDialog = ActiveScenarioDialog.CrashReport(reportId)
-    }
 
     fun showLocalePluginBackgroundLaunchHelp() {
         activeDialog = ActiveScenarioDialog.BackgroundLaunchHelp
@@ -253,12 +247,6 @@ class ScenarioListHost(
                         ActiveScenarioDialog.ConditionsMigration -> {
                             ConditionsMigrationDialog(
                                 viewModel = conditionsMigrationViewModel,
-                                onDismiss = ::dismissActiveDialog,
-                            )
-                        }
-                        is ActiveScenarioDialog.CrashReport -> {
-                            CrashReportFlow(
-                                reportId = currentDialog.reportId,
                                 onDismiss = ::dismissActiveDialog,
                             )
                         }

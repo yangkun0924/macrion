@@ -212,6 +212,8 @@
     <string name="settings_section_about">About</string>
     <string name="settings_version_title">Version</string>
     <string name="settings_install_source_title">Installation source</string>
+    <string name="settings_open_source_title">Open source notice</string>
+    <string name="settings_open_source_value">Based on Macrion (Vibhor Goel) and Klick\'r (Kevin Buzeau). Licensed under GPL-3.0. Source: github.com/yangkun0924/macrion</string>
     <string name="install_source_unknown">Unknown</string>
     <string name="settings_toolbar_size_title">Toolbar size</string>
     <string name="settings_toolbar_size_dialog_description">Adjust the size of the overlay toolbar.</string>

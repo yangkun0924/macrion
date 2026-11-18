@@ -52,9 +52,6 @@
             android:excludeFromRecents="true"
             android:noHistory="true"/>
 
-        <activity android:name="io.github.vibhor1102.macrion.crash.CrashReportsActivity"
-            android:exported="false" />
-
         <activity
             android:name="${scenarioActivity}"
             android:exported="true">
