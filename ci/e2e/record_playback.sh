@@ -347,10 +347,11 @@ adb shell input keyevent KEYCODE_HOME; sleep 2
 adb shell am start -n "$PKG/io.github.vibhor1102.macrion.settings.SettingsActivity" | tee -a "$RESULT"
 sleep 4
 : > "$OUT/settings_texts.txt"
-for i in 1 2 3 4 5 6; do
+read -r SW SH < <(adb shell wm size | tr -d '\r' | sed -E 's/.* ([0-9]+)x([0-9]+)$/\1 \2/')
+for i in 1 2 3 4 5 6 7 8; do
   dump "settings_$i"
   python3 "$HERE/ui.py" texts "$LAST" >> "$OUT/settings_texts.txt"
-  adb shell input swipe 500 1600 500 400 300; sleep 2
+  adb shell input swipe $((SW / 2)) $((SH * 4 / 5)) $((SW / 2)) $((SH / 5)) 400; sleep 2
 done
 # ui.py texts prints "<text> <resource-id> <bounds>": match the whole text only.
 END=' +([^ ]+:id/[^ ]+ +)?\['
