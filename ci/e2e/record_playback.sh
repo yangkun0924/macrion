@@ -284,8 +284,11 @@ python3 "$HERE/ui.py" has "$LAST" "^recording$" || fail "[list] the card is not 
 RUN_NOW=$(pos_in "$LAST" "^run now$") || fail "[list] 'Run now' button not found on the card"
 log "[list] recording shown, tap 'Run now' at $RUN_NOW"
 sleep 3 # service binds again after the dump
+adb logcat -c
 adb shell input tap $RUN_NOW
 check_playback "list_run_now"
+TAPS_ONE_RUN=$(adb logcat -d | grep -c "ServiceActionExecutor: Tapped element")
+log "[list_run_now] element taps in one run: $TAPS_ONE_RUN"
 
 # 7. Repeat 2 times from the card: the scenario runs twice by itself, then the repeat ends.
 reset_apps
@@ -312,6 +315,9 @@ adb logcat -d | grep -E " (ScenarioRepeatRunner|ShortcutLauncherActivity)" | tai
 adb logcat -d | grep -q "ScenarioRepeatRunner.*Run 3" && fail "[repeat] a third run started"
 TOP=$(top_package); log "[repeat] app on screen after the repeat: $TOP"
 [ "$TOP" = "$TARGET" ] || fail "[repeat] the repeat ended on '$TOP' instead of '$TARGET'"
+TAPS_REPEAT=$(adb logcat -d | grep -c "ServiceActionExecutor: Tapped element")
+log "[repeat] element taps during the repeat: $TAPS_REPEAT (one run: $TAPS_ONE_RUN)"
+[ "$TAPS_ONE_RUN" -gt 0 ] && [ "$TAPS_REPEAT" -lt $((TAPS_ONE_RUN * 2)) ] && fail "[repeat] the second run did not tap like the first one"
 log "[repeat] OK: 2 runs"
 
 # 5. Web page menu, like the company app: native screen -> "Order menu" -> web page -> "Coffee" tab -> scroll to the

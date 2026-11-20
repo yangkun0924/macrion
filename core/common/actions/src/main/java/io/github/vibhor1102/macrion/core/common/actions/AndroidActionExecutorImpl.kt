@@ -141,7 +141,10 @@ internal class AndroidActionExecutorImpl @Inject constructor(
             }
 
             when (lookup) {
-                ElementLookup.Clicked -> return true
+                ElementLookup.Clicked -> {
+                    Log.i(TAG, "Tapped element: $kind '$value'")
+                    return true
+                }
                 is ElementLookup.TapAt -> {
                     // A page still moving (end of a scroll) gives another position on the next look: tap once it
                     // stays in place.
@@ -160,6 +163,7 @@ internal class AndroidActionExecutorImpl @Inject constructor(
                             .addStroke(GestureDescription.StrokeDescription(path, 0L, ELEMENT_TAP_DURATION_MS))
                             .build()
                     )
+                    Log.i(TAG, "Tapped element at its position: $kind '$value'")
                     return true
                 }
                 ElementLookup.ScrolledTo -> {
