@@ -103,6 +103,9 @@ interface IRepository {
      */
     suspend fun deleteScenario(scenarioId: Identifier)
 
+    /** Change only the name of a scenario, keeping all its content. */
+    suspend fun renameScenario(scenarioId: Long, name: String)
+
     /**
      * Mark a scenario as used.
      * This will update the ScenarioStats for this scenario.

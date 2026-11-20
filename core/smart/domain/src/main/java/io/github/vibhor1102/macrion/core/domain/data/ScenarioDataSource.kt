@@ -149,6 +149,11 @@ internal class ScenarioDataSource @Inject constructor(
         return database.scenarioDao().add(scenario.toEntity())
     }
 
+    suspend fun renameScenario(scenarioId: Long, name: String) {
+        Log.d(TAG, "Rename scenario $scenarioId")
+        database.scenarioDao().rename(scenarioId, name.trim())
+    }
+
     suspend fun deleteScenario(scenarioId: Identifier, onImageConditionsRemoved: suspend (List<String>) -> Unit) {
         Log.d(TAG, "Delete scenario from the database: $scenarioId")
 

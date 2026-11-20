@@ -1,6 +1,8 @@
 /* Copyright (C) 2026 Macrion contributors. Licensed under the GNU GPL v3 or later. */
 package io.github.vibhor1102.macrion.feature.externallaunch.shortcut
 
+import io.github.vibhor1102.macrion.feature.externallaunch.repeat.ScenarioRepeatRunner
+
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -35,12 +37,24 @@ class ShortcutLauncherActivity : ComponentActivity() {
         private const val EXTRA_IS_DUMB =
             "io.github.vibhor1102.macrion.feature.externallaunch.shortcut.EXTRA_IS_DUMB"
 
+        private const val EXTRA_REPEAT_TIMES =
+            "io.github.vibhor1102.macrion.feature.externallaunch.shortcut.EXTRA_REPEAT_TIMES"
+
+        private const val EXTRA_SCENARIO_NAME =
+            "io.github.vibhor1102.macrion.feature.externallaunch.shortcut.EXTRA_SCENARIO_NAME"
+
         fun getLaunchIntent(context: Context, scenarioId: Long, isDumb: Boolean = false): Intent =
             Intent(context, ShortcutLauncherActivity::class.java)
                 .setAction(Intent.ACTION_VIEW)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 .putExtra(EXTRA_SCENARIO_ID, scenarioId)
                 .putExtra(EXTRA_IS_DUMB, isDumb)
+
+        /** Intent repeating the scenario [times] times ([ScenarioRepeatRunner.INFINITE]: until stopped). */
+        fun getRepeatIntent(context: Context, scenarioId: Long, scenarioName: String, isDumb: Boolean, times: Int): Intent =
+            getLaunchIntent(context, scenarioId, isDumb)
+                .putExtra(EXTRA_REPEAT_TIMES, times)
+                .putExtra(EXTRA_SCENARIO_NAME, scenarioName)
     }
 
     private val viewModel: ShortcutLauncherViewModel by viewModels()
@@ -59,6 +73,19 @@ class ShortcutLauncherActivity : ComponentActivity() {
         }
         // Don't restart the flow on a configuration change, the permission/projection results will resume it.
         if (savedInstanceState != null) return
+
+        // A repeat shortcut: the runner starts each run through this activity again, without the repeat extra.
+        if (intent?.hasExtra(EXTRA_REPEAT_TIMES) == true) {
+            ScenarioRepeatRunner.start(
+                context = this,
+                scenarioId = scenarioId,
+                scenarioName = intent?.getStringExtra(EXTRA_SCENARIO_NAME).orEmpty(),
+                isDumb = intent?.getBooleanExtra(EXTRA_IS_DUMB, false) == true,
+                times = intent?.getIntExtra(EXTRA_REPEAT_TIMES, ScenarioRepeatRunner.INFINITE) ?: ScenarioRepeatRunner.INFINITE,
+            )
+            finish()
+            return
+        }
 
         viewModel.startPermissionFlowIfNeeded(
             activity = this,

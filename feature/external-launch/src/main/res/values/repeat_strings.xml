@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_repeat">Repeat</string>
+    <string name="dialog_title_repeat">Repeat %1$s</string>
+    <string name="item_repeat_times">%1$d times</string>
+    <string name="item_repeat_infinite">Until I stop it</string>
+    <string name="item_repeat_custom">Other number…</string>
+    <string name="dialog_title_repeat_count">How many times?</string>
+    <string name="hint_repeat_count">Number of runs</string>
+    <string name="button_repeat_next">Next</string>
+    <string name="button_repeat_cancel">Cancel</string>
+    <string name="button_repeat_start">Start now</string>
+    <string name="button_repeat_shortcut">Add to home screen</string>
+    <string name="message_repeat_confirm">%1$s runs %2$d times in a row, with a short pause between runs.\n\nPress Stop in the notification to stop at any time.</string>
+    <string name="message_repeat_confirm_infinite">%1$s runs again and again until you stop it.\n\nPress Stop in the notification to stop.</string>
+    <string name="toast_repeat_invalid_count">Enter a number from 1 to %1$d</string>
+    <string name="shortcut_label_repeat_times">%1$s (%2$d times)</string>
+    <string name="shortcut_label_repeat_infinite">%1$s (repeat)</string>
+    <string name="notification_channel_repeat">Repeated runs</string>
+    <string name="notification_repeat_title">Repeating %1$s</string>
+    <string name="notification_repeat_text">Run %1$d of %2$d</string>
+    <string name="notification_repeat_text_infinite">Run %1$d, until you stop it</string>
+    <string name="notification_repeat_stop">Stop</string>
+    <string name="toast_repeat_done">Repeat finished (%1$d runs)</string>
+    <string name="toast_repeat_stopped">Repeat stopped at run %1$d</string>
+    <string name="toast_repeat_not_started">Run %1$d could not start, repeat stopped</string>
+    <string name="toast_repeat_cancelled">Repeat stopped</string>
+</resources>

@@ -55,6 +55,14 @@ import androidx.compose.ui.unit.dp
 import io.github.vibhor1102.macrion.R
 import io.github.vibhor1102.macrion.feature.externallaunch.schedule.ScheduleDialogs
 import io.github.vibhor1102.macrion.feature.externallaunch.shortcut.ScenarioShortcuts
+import io.github.vibhor1102.macrion.feature.externallaunch.shortcut.ShortcutLauncherActivity
+import io.github.vibhor1102.macrion.feature.externallaunch.repeat.RepeatDialogs
+import android.app.AlertDialog
+import android.content.Context
+import android.text.InputFilter
+import android.view.WindowManager
+import android.widget.EditText
+import android.widget.FrameLayout
 import io.github.vibhor1102.macrion.feature.externallaunch.R as ExternalLaunchR
 import io.github.vibhor1102.macrion.core.domain.model.condition.ScreenCondition
 import io.github.vibhor1102.macrion.core.dumb.domain.model.DumbScenario as DumbScenarioModel
@@ -107,18 +115,43 @@ private fun ValidScenarioCard(
     onExpand: () -> Unit,
     onExport: () -> Unit,
     modifier: Modifier = Modifier,
+    isRecorded: Boolean = false,
     details: @Composable () -> Unit,
 ) {
-    ScenarioCard(onClick = if (item.showExportCheckbox) onExport else onLaunch, modifier = modifier) {
+    val context = LocalContext.current
+    val isDumb = item is DumbScenarioItem
+    val onRunNow = { runNow(context, item.getScenarioId(), isDumb) }
+    // A recording is run right away when its card is touched: there is nothing to set up on screen first.
+    val onCardClick = when {
+        item.showExportCheckbox -> onExport
+        isRecorded -> onRunNow
+        else -> onLaunch
+    }
+    ScenarioCard(onClick = onCardClick, modifier = modifier) {
         Column(Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(painterResource(typeIcon), null, Modifier.size(24.dp))
                 Spacer(Modifier.width(8.dp))
-                ScenarioTitle(item.displayName, Modifier.weight(1f))
+                Column(Modifier.weight(1f)) {
+                    ScenarioTitle(item.displayName)
+                    if (isRecorded) {
+                        Text(
+                            stringResource(R.string.label_recording),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
                 if (item.showExportCheckbox) {
                     RadioButton(selected = item.checkedForExport, onClick = onExport)
                 } else {
-                    VerticalDivider(Modifier.height(32.dp).padding(start = 16.dp, end = 8.dp))
+                    FilledIconButton(onClick = onRunNow) {
+                        Icon(painterResource(R.drawable.ic_play_arrow), stringResource(R.string.content_desc_run_now), Modifier.size(20.dp))
+                    }
+                    FilledTonalIconButton(onClick = { RepeatDialogs.show(context, item.getScenarioId(), item.displayName, isDumb) }) {
+                        Icon(painterResource(ExternalLaunchR.drawable.ic_repeat_run), stringResource(ExternalLaunchR.string.action_repeat), Modifier.size(20.dp))
+                    }
+                    VerticalDivider(Modifier.height(32.dp).padding(start = 8.dp, end = 4.dp))
                     IconButton(onClick = onExpand) {
                         Icon(
                             painterResource(if (item.expanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down),
@@ -139,7 +172,7 @@ private fun ValidScenarioCard(
 }
 
 @Composable
-private fun DumbDetails(item: DumbScenarioItem, onCopy: () -> Unit, onDelete: () -> Unit) {
+private fun DumbDetails(item: DumbScenarioItem, onCopy: () -> Unit, onDelete: () -> Unit, onRename: () -> Unit) {
     val context = LocalContext.current
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -159,6 +192,7 @@ private fun DumbDetails(item: DumbScenarioItem, onCopy: () -> Unit, onDelete: ()
         ActionButtons(
             onCopy = onCopy,
             onDelete = onDelete,
+            onRename = onRename,
             onAddShortcut = {
                 ScenarioShortcuts.requestPinSmartScenario(context, item.scenario.id.databaseId, item.scenario.name, isDumb = true)
             },
@@ -173,6 +207,7 @@ private fun SmartDetails(
     bitmapProvider: (ScreenCondition.Image, (Bitmap?) -> Unit) -> Job?,
     onCopy: () -> Unit,
     onDelete: () -> Unit,
+    onRename: () -> Unit,
 ) {
     val context = LocalContext.current
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
@@ -203,6 +238,7 @@ private fun SmartDetails(
             ActionButtons(
                 onCopy = onCopy,
                 onDelete = onDelete,
+                onRename = onRename,
                 onAddShortcut = {
                     ScenarioShortcuts.requestPinSmartScenario(context, item.scenario.id.databaseId, item.scenario.name)
                 },
@@ -216,10 +252,16 @@ private fun SmartDetails(
 private fun ActionButtons(
     onCopy: () -> Unit,
     onDelete: () -> Unit,
+    onRename: (() -> Unit)? = null,
     onAddShortcut: (() -> Unit)? = null,
     onSchedule: (() -> Unit)? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (onRename != null) {
+            FilledTonalIconButton(onClick = onRename) {
+                Icon(painterResource(R.drawable.ic_edit), stringResource(R.string.content_desc_rename))
+            }
+        }
         if (onSchedule != null) {
             FilledTonalIconButton(onClick = onSchedule) {
                 Icon(
@@ -344,8 +386,11 @@ internal fun ScenarioListItem(
     onExport: (ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit,
     onCopy: (ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit,
     onDelete: (ScenarioListUiState.Item.ScenarioItem) -> Unit,
+    onRename: (ScenarioListUiState.Item.ScenarioItem, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val askRename = { showRenameDialog(context, item.displayName) { onRename(item, it) } }
     when (item) {
         is EmptyScenario -> ScenarioCard(onClick = { onLaunch(item) }, modifier = modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -368,10 +413,45 @@ internal fun ScenarioListItem(
 
         is DumbScenarioItem -> ValidScenarioCard(
             item, R.drawable.ic_dumb, { onLaunch(item) }, { onExpand(item) }, { onExport(item) }, modifier,
-        ) { DumbDetails(item, { onCopy(item) }, { onDelete(item) }) }
+        ) { DumbDetails(item, { onCopy(item) }, { onDelete(item) }, askRename) }
 
         is SmartScenarioItem -> ValidScenarioCard(
-            item, R.drawable.ic_smart, { onLaunch(item) }, { onExpand(item) }, { onExport(item) }, modifier,
-        ) { SmartDetails(item, bitmapProvider, { onCopy(item) }, { onDelete(item) }) }
+            item, if (item.isRecorded) R.drawable.ic_record_taps else R.drawable.ic_smart,
+            { onLaunch(item) }, { onExpand(item) }, { onExport(item) }, modifier, isRecorded = item.isRecorded,
+        ) { SmartDetails(item, bitmapProvider, { onCopy(item) }, { onDelete(item) }, askRename) }
     }
 }
+
+/** Start the scenario right away, like its home screen shortcut. */
+private fun runNow(context: Context, scenarioId: Long, isDumb: Boolean) {
+    context.startActivity(ShortcutLauncherActivity.getLaunchIntent(context, scenarioId, isDumb))
+}
+
+/** A plain dialog with the current name, selected so typing replaces it. */
+private fun showRenameDialog(context: Context, currentName: String, onRenamed: (String) -> Unit) {
+    val input = EditText(context).apply {
+        setText(currentName)
+        setSelectAllOnFocus(true)
+        setSingleLine()
+        filters = arrayOf(InputFilter.LengthFilter(RENAME_MAX_LENGTH))
+    }
+    val padding = (20 * context.resources.displayMetrics.density).toInt()
+    val container = FrameLayout(context).apply {
+        setPadding(padding, padding / 2, padding, 0)
+        addView(input)
+    }
+    val dialog = AlertDialog.Builder(context)
+        .setTitle(R.string.dialog_title_rename)
+        .setView(container)
+        .setPositiveButton(R.string.button_rename_save) { _, _ ->
+            val name = input.text.toString().trim()
+            if (name.isNotEmpty() && name != currentName) onRenamed(name)
+        }
+        .setNegativeButton(R.string.button_rename_cancel, null)
+        .create()
+    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+    dialog.show()
+    input.requestFocus()
+}
+
+private const val RENAME_MAX_LENGTH = 60

@@ -145,6 +145,10 @@ internal class Repository @Inject internal constructor(
     override suspend fun deleteScenario(scenarioId: Identifier): Unit =
         dataSource.deleteScenario(scenarioId, ::clearRemovedConditionsBitmaps)
 
+    override suspend fun renameScenario(scenarioId: Long, name: String) {
+        dataSource.renameScenario(scenarioId, name)
+    }
+
     override suspend fun markAsUsed(scenarioId: Identifier) {
         dataSource.markAsUsed(scenarioId.databaseId)
     }

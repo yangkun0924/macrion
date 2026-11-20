@@ -141,10 +141,32 @@ sleep 5; adb shell input tap $P1; sleep 3; echo "after tap 1: $(focused_window)"
 echo "after tap 2: $(focused_window)"
 shot "recorded_end_screen"
 
+# The app asks to name a recording when it is stopped: replace the proposed name and save.
+name_recording() {
+  local name="$1" label="$2"
+  local found=""
+  for _ in 1 2 3 4 5; do
+    dump "${label}_name_dialog"
+    if python3 "$HERE/ui.py" has "$LAST" "^name this recording$"; then found=1; break; fi
+    sleep 2
+  done
+  [ -n "$found" ] || fail "[$label] the name dialog did not show up when stopping the recording"
+  log "[$label] name dialog shown"
+  adb shell input keycombination 113 29; sleep 0.5   # ctrl+a
+  adb shell input keyevent KEYCODE_DEL; sleep 0.5
+  adb shell input text "$name"; sleep 1
+  dump "${label}_name_typed"
+  python3 "$HERE/ui.py" has "$LAST" "^$name\$" || fail "[$label] the typed name is not in the field"
+  local pos; pos=$(python3 "$HERE/ui.py" find "$LAST" "^save$") || fail "[$label] 'Save' not found in the name dialog"
+  adb shell input tap $pos
+  sleep 5
+}
+
 # 4. Stop and save: same activity as the notification "Stop and save" button.
 log "stop and save"
 adb shell am start -n "$PKG/io.github.vibhor1102.macrion.recorder.RecorderActionActivity" -a io.github.vibhor1102.macrion.recorder.STOP | tee -a "$RESULT"
-sleep 5
+sleep 4
+name_recording "E2E_Settings" "settings"
 dump "after_save"
 # The app asks the launcher to pin a home screen shortcut: accept it when the dialog shows.
 if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(add automatically|add|add to home screen)$"); then
@@ -164,6 +186,9 @@ if ! [[ "$ID" =~ ^[0-9]+$ ]]; then
   ID=1
 fi
 log "saved scenario id $ID"
+SAVED_NAME=$(adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select name from scenario_table where id=$ID;'" | tr -d '\r')
+log "saved scenario name: $SAVED_NAME"
+[ "$SAVED_NAME" = "E2E_Settings" ] || fail "the recording was not saved with the name typed in the dialog ($SAVED_NAME)"
 
 reset_apps() {
   adb shell am force-stop $TARGET
@@ -249,6 +274,46 @@ adb shell dumpsys alarm | grep -E "$PKG" | head -5 | tee -a "$RESULT"
 adb shell dumpsys alarm | grep -q "schedule.FIRE" || adb shell dumpsys alarm | grep -q "$PKG" || fail "no alarm set for the schedule"
 log "schedule alarm set"
 
+# 6. The recording is in the list, marked as a recording, and runs from its "Run now" button.
+reset_apps
+adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+sleep 5
+dump "list_with_recording"
+python3 "$HERE/ui.py" has "$LAST" "^E2E_Settings$" || fail "[list] the recording is not shown in the list"
+python3 "$HERE/ui.py" has "$LAST" "^recording$" || fail "[list] the card is not marked as a recording"
+RUN_NOW=$(pos_in "$LAST" "^run now$") || fail "[list] 'Run now' button not found on the card"
+log "[list] recording shown, tap 'Run now' at $RUN_NOW"
+sleep 3 # service binds again after the dump
+adb shell input tap $RUN_NOW
+check_playback "list_run_now"
+
+# 7. Repeat 2 times from the card: the scenario runs twice by itself, then the repeat ends.
+reset_apps
+adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+sleep 5
+adb logcat -c
+tap "repeat_button" "^repeat$" || fail "[repeat] 'Repeat' button not found on the card"
+tap "repeat_count" "^2 times$" || fail "[repeat] '2 times' not found"
+dump "repeat_confirm"
+START=$(pos_in "$LAST" "^start now$") || fail "[repeat] 'Start now' not found"
+sleep 3 # service binds again after the dump
+adb shell input tap $START
+log "[repeat] started 2 runs"
+# No screen dump while it runs: it would stop the accessibility service.
+REPEAT_OK=""
+for _ in $(seq 1 40); do
+  sleep 4
+  if adb logcat -d | grep -q "ScenarioRepeatRunner.*Run 2 done"; then REPEAT_OK=1; break; fi
+  if adb logcat -d | grep -qE "ScenarioRepeatRunner.*(stop repeating)"; then break; fi
+done
+echo "--- repeat logcat"
+adb logcat -d | grep -E " (ScenarioRepeatRunner|ShortcutLauncherActivity)" | tail -30
+[ -n "$REPEAT_OK" ] || fail "[repeat] the scenario was not run twice by itself"
+adb logcat -d | grep -q "ScenarioRepeatRunner.*Run 3" && fail "[repeat] a third run started"
+TOP=$(top_package); log "[repeat] app on screen after the repeat: $TOP"
+[ "$TOP" = "$TARGET" ] || fail "[repeat] the repeat ended on '$TOP' instead of '$TARGET'"
+log "[repeat] OK: 2 runs"
+
 # 5. Web page menu, like the company app: native screen -> "Order menu" -> web page -> "Coffee" tab -> scroll to the
 #    bottom -> "Iced americano". The playback must scroll by itself to find the item.
 if [ -n "$WEB_APK" ]; then
@@ -311,7 +376,9 @@ if [ -n "$WEB_APK" ]; then
   sleep 0.7 # a finger needs about that long to come back down
   adb shell input tap $WP3_PRICE; sleep 4; shot "web_recorded_end"
   adb shell am start -n "$PKG/io.github.vibhor1102.macrion.recorder.RecorderActionActivity" -a io.github.vibhor1102.macrion.recorder.STOP | tee -a "$RESULT"
-  sleep 5; dump "web_after_save"
+  sleep 4
+  name_recording "E2E_Coffee" "web"
+  dump "web_after_save"
   if pos=$(python3 "$HERE/ui.py" find "$LAST" "^(add automatically|add|add to home screen)$"); then adb shell input tap $pos; sleep 2; fi
   WID=$(adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select max(id) from scenario_table;'" | tr -d '\r')
   [ "$WID" != "$ID" ] || fail "the web recording was not saved"
@@ -362,6 +429,11 @@ fi
 grep -qiE "^open source notice$END" "$OUT/settings_texts.txt" || fail "[settings] the open source notice is missing"
 grep -qiE "^troubleshooting$END" "$OUT/settings_texts.txt" || log "WARNING: troubleshooting item not seen"
 log "[settings] OK: no support area, open source notice shown"
+
+# Home screen with the shortcuts of both recordings: each one gets its own color (checked on the screenshot).
+adb shell input keyevent KEYCODE_HOME; sleep 3
+shot "home_shortcuts"
+adb shell dumpsys shortcut | grep -E "id=(smart|dumb)-scenario" | head -10 | tee -a "$RESULT"
 
 adb logcat -d > "$OUT/logcat.txt"
 log "PASS"

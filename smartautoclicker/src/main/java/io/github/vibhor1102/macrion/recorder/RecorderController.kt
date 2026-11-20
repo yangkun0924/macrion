@@ -8,7 +8,13 @@ import android.app.Activity
 import android.os.Bundle
 import android.content.Context
 import android.content.Intent
+import android.app.AlertDialog
 import android.os.Build
+import android.text.InputFilter
+import android.text.InputType
+import android.view.WindowManager
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -47,13 +53,78 @@ object RecorderController {
         return true
     }
 
-    /** Stop the recording and save it, then show the scenario list and offer the home screen shortcut. */
+    /**
+     * Stop the recording, ask the user to name it, save it, then show the scenario list and offer the home screen
+     * shortcut.
+     */
     internal fun stopRecording(activity: Activity) {
         val appContext = activity.applicationContext
         NotificationManagerCompat.from(appContext).cancel(NOTIFICATION_ID)
 
+        val recording = TapRecorder.stop()
+        if (recording == null || recording.isEmpty) {
+            Toast.makeText(appContext, R.string.toast_recorder_nothing_recorded, Toast.LENGTH_LONG).show()
+            activity.finish()
+            return
+        }
+
+        pendingRecording = recording
+        askName(activity, TapRecorder.defaultName(appContext)) { name ->
+            pendingRecording = null
+            save(activity, recording, name)
+        }
+    }
+
+    /** Recording waiting for its name while the name dialog is shown. */
+    private var pendingRecording: TapRecorder.Recording? = null
+
+    /** The name dialog went away without an answer (home button, screen off...): keep the recording anyway. */
+    internal fun onNameDialogGone(context: Context) {
+        val recording = pendingRecording ?: return
+        pendingRecording = null
+        val appContext = context.applicationContext
         scope.launch {
-            val saved = TapRecorder.stopAndSave(appContext)
+            val saved = TapRecorder.save(appContext, recording, null)
+            withContext(Dispatchers.Main) {
+                if (saved != null) Toast.makeText(appContext, R.string.toast_recorder_saved, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    /** Name the recording before it is saved: renaming it later is harder. Never dismissed without saving. */
+    private fun askName(activity: Activity, defaultName: String, onNamed: (String) -> Unit) {
+        val input = EditText(activity).apply {
+            setText(defaultName)
+            setSelectAllOnFocus(true)
+            setSingleLine()
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            filters = arrayOf(InputFilter.LengthFilter(NAME_MAX_LENGTH))
+            hint = activity.getString(R.string.hint_recording_name)
+        }
+        val padding = (20 * activity.resources.displayMetrics.density).toInt()
+        val container = FrameLayout(activity).apply {
+            setPadding(padding, padding / 2, padding, 0)
+            addView(input)
+        }
+        val dialog = AlertDialog.Builder(activity)
+            .setTitle(R.string.dialog_title_recording_name)
+            .setMessage(R.string.message_recording_name)
+            .setView(container)
+            .setCancelable(false)
+            .setPositiveButton(R.string.button_recording_save) { _, _ ->
+                onNamed(input.text.toString().trim().ifEmpty { defaultName })
+            }
+            .create()
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+        dialog.show()
+        input.requestFocus()
+        input.selectAll()
+    }
+
+    private fun save(activity: Activity, recording: TapRecorder.Recording, name: String) {
+        val appContext = activity.applicationContext
+        scope.launch {
+            val saved = TapRecorder.save(appContext, recording, name)
             withContext(Dispatchers.Main) {
                 if (saved == null) {
                     Toast.makeText(appContext, R.string.toast_recorder_nothing_recorded, Toast.LENGTH_LONG).show()
@@ -132,7 +203,13 @@ class RecorderActionActivity : Activity() {
             else -> finish()
         }
     }
+
+    override fun onDestroy() {
+        if (isFinishing) RecorderController.onNameDialogGone(this)
+        super.onDestroy()
+    }
 }
 
 private const val CHANNEL_ID = "tap_recorder"
 private const val NOTIFICATION_ID = 0x5245
+private const val NAME_MAX_LENGTH = 60

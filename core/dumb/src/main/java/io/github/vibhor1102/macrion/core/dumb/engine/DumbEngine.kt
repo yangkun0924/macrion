@@ -184,6 +184,7 @@ class DumbEngine @Inject constructor(
                 dumbActionExecutor.onScenarioLoopFinished()
             }
 
+            if (generation == executionGeneration) io.github.vibhor1102.macrion.core.base.ScenarioEndSignal.onFinishedByItself()
             stopIfCurrent(generation)
         }
 

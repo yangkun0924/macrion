@@ -18,4 +18,16 @@
     <string name="notification_recorder_text">Open the app and tap like usual. Press Stop when you are done.</string>
     <string name="notification_recorder_stop">Stop and save</string>
     <string name="notification_recorder_cancel">Cancel</string>
+    <string name="dialog_title_recording_name">Name this recording</string>
+    <string name="message_recording_name">Give it a name you will recognize, like \"Iced americano\". It is also the name of the home screen shortcut.</string>
+    <string name="hint_recording_name">Name</string>
+    <string name="button_recording_save">Save</string>
+    <string name="label_recording">Recording</string>
+    <string name="content_desc_run_now">Run now</string>
+    <string name="content_desc_rename">Rename</string>
+    <string name="dialog_title_rename">Rename</string>
+    <string name="button_rename_save">Save</string>
+    <string name="button_rename_cancel">Cancel</string>
+    <string name="toast_renamed">Renamed</string>
+    <string name="hint_scenario_name_required">Give it a name, like \"Coffee order\"</string>
 </resources>

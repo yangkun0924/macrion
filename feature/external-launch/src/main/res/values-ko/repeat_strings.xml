@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_repeat">반복 실행</string>
+    <string name="dialog_title_repeat">%1$s 반복 실행</string>
+    <string name="item_repeat_times">%1$d번</string>
+    <string name="item_repeat_infinite">멈출 때까지 계속</string>
+    <string name="item_repeat_custom">직접 입력…</string>
+    <string name="dialog_title_repeat_count">몇 번 반복할까요?</string>
+    <string name="hint_repeat_count">반복 횟수</string>
+    <string name="button_repeat_next">다음</string>
+    <string name="button_repeat_cancel">취소</string>
+    <string name="button_repeat_start">지금 시작</string>
+    <string name="button_repeat_shortcut">홈 화면에 추가</string>
+    <string name="message_repeat_confirm">%1$s을(를) %2$d번 연달아 실행해요. 한 번 끝날 때마다 잠깐 쉬었다가 다시 시작해요.\n\n알림의 \'중지\'를 누르면 언제든 멈춰요.</string>
+    <string name="message_repeat_confirm_infinite">%1$s을(를) 멈출 때까지 계속 반복해요.\n\n알림의 \'중지\'를 누르면 멈춰요.</string>
+    <string name="toast_repeat_invalid_count">1부터 %1$d 사이의 숫자를 넣어 주세요</string>
+    <string name="shortcut_label_repeat_times">%1$s (%2$d번)</string>
+    <string name="shortcut_label_repeat_infinite">%1$s (계속 반복)</string>
+    <string name="notification_channel_repeat">반복 실행</string>
+    <string name="notification_repeat_title">%1$s 반복 중</string>
+    <string name="notification_repeat_text">%2$d번 중 %1$d번째 실행 중</string>
+    <string name="notification_repeat_text_infinite">%1$d번째 실행 중 (멈출 때까지)</string>
+    <string name="notification_repeat_stop">중지</string>
+    <string name="toast_repeat_done">반복 실행을 마쳤어요 (%1$d번)</string>
+    <string name="toast_repeat_stopped">%1$d번째에서 반복을 멈췄어요</string>
+    <string name="toast_repeat_not_started">%1$d번째 실행이 시작되지 않아 반복을 멈췄어요</string>
+    <string name="toast_repeat_cancelled">반복 실행을 멈췄어요</string>
+</resources>

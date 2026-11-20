@@ -200,6 +200,17 @@ class ScenarioListViewModel @Inject constructor(
         }
     }
 
+    /** Give a new name to the scenario, keeping all its content. */
+    fun renameScenario(item: ScenarioListUiState.Item.ScenarioItem, name: String) {
+        val newName = name.trim().ifEmpty { return }
+        viewModelScope.launch(Dispatchers.IO) {
+            when (val scenario = item.scenario) {
+                is DumbScenario -> dumbRepository.updateDumbScenario(scenario.copy(name = newName))
+                is Scenario -> smartRepository.renameScenario(scenario.id.databaseId, newName)
+            }
+        }
+    }
+
     /**
      * Get the bitmap corresponding to a condition.
      * Loading is async and the result notified via the onBitmapLoaded argument.

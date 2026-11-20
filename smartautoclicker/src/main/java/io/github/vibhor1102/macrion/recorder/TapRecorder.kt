@@ -594,31 +594,52 @@ object TapRecorder {
         _isRecording.value = false
     }
 
+    /** What was recorded, not saved yet. */
+    class Recording internal constructor(
+        internal val steps: List<Step>,
+        internal val startPackage: String?,
+        // Kept here: the service (and its repository) may be restarted while the user types the name.
+        internal val repository: IRepository?,
+    ) {
+        val isEmpty: Boolean get() = steps.isEmpty() && startPackage == null
+    }
+
     /**
-     * Stop recording and save the scenario.
-     * @return the id and name of the created scenario, or null if nothing was recorded or save failed.
+     * Stop recording, without saving yet: the user names the recording first.
+     * @return what was recorded, or null if nothing was being recorded.
      */
-    suspend fun stopAndSave(context: Context, scenarioName: String? = null): Pair<Long, String>? {
+    fun stop(): Recording? {
         if (!_isRecording.value) return null
         restoreServiceInfo()
         _isRecording.value = false
 
-        val recordedSteps = steps.toList()
-        val pkg = startPackage
+        val recording = Recording(steps.toList(), startPackage, repository)
         steps.clear()
         _stepCount.value = 0
-        val repo = repository ?: return null
-        Log.i(TAG, "Stop recording: ${recordedSteps.size} steps, app to launch $pkg")
-        if (recordedSteps.isEmpty() && pkg == null) return null
+        Log.i(TAG, "Stop recording: ${recording.steps.size} steps, app to launch ${recording.startPackage}")
+        return recording
+    }
 
-        val name = scenarioName ?: (context.getString(io.github.vibhor1102.macrion.R.string.recorded_scenario_name) +
-                " " + SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date()))
+    /** The name a recording gets when the user doesn't give one: "Recorded 11-20 12:30". */
+    fun defaultName(context: Context): String =
+        context.getString(io.github.vibhor1102.macrion.R.string.recorded_scenario_name) +
+                " " + SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date())
 
+    /**
+     * Save a recording as a new scenario.
+     * @return the id and name of the created scenario, or null if nothing was recorded or save failed.
+     */
+    suspend fun save(context: Context, recording: Recording, scenarioName: String?): Pair<Long, String>? {
+        val repo = recording.repository ?: repository ?: return null
+        if (recording.isEmpty) return null
+
+        val name = scenarioName?.trim()?.takeIf { it.isNotEmpty() } ?: defaultName(context)
         val scenarioId = repo.addScenario(
             Scenario(id = Identifier(databaseId = DATABASE_ID_INSERTION, tempId = 0L), name = name, detectionQuality = 1200)
         )
+        RecordedScenarios.add(context, scenarioId)
         val scenario = repo.getScenario(scenarioId) ?: return null
-        val event = buildEvent(context, scenario, pkg, recordedSteps)
+        val event = buildEvent(context, scenario, recording.startPackage, recording.steps)
         val saved = repo.updateScenario(scenario, listOf(event), emptyList())
         Log.i(TAG, "Scenario $scenarioId '$name' saved=$saved with ${event.actions.size} actions")
         return if (saved) scenarioId to name else null

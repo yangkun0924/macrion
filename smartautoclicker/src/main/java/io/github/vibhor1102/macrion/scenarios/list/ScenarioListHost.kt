@@ -163,6 +163,10 @@ class ScenarioListHost(
                         onDumbChipClicked = scenarioListViewModel::updateDumbVisible,
                         onSortOrderClicked = scenarioListViewModel::updateSortOrder,
                         onRecord = { RecorderController.startRecording(activity) },
+                        onRename = { item, name ->
+                            scenarioListViewModel.renameScenario(item, name)
+                            android.widget.Toast.makeText(activity, R.string.toast_renamed, android.widget.Toast.LENGTH_SHORT).show()
+                        },
                     )
 
                     when (val currentDialog = activeDialog) {

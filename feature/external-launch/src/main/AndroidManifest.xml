@@ -24,6 +24,10 @@
     <application>
 
         <receiver
+            android:name=".repeat.RepeatStopReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".schedule.ScheduleReceiver"
             android:exported="false">
             <intent-filter>

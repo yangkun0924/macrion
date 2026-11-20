@@ -65,6 +65,7 @@ internal fun ComposeScenarioList(
     onDumbChipClicked: (Boolean) -> Unit,
     onSortOrderClicked: (Boolean) -> Unit,
     onRecord: (() -> Unit)? = null,
+    onRename: (ScenarioListUiState.Item.ScenarioItem, String) -> Unit = { _, _ -> },
 ) {
     val content = uiState?.listContent.orEmpty()
     val isSelection = uiState?.type == ScenarioListUiState.Type.SELECTION
@@ -122,14 +123,14 @@ internal fun ComposeScenarioList(
             ) {
                 content.forEach { item ->
                     item(key = item.scenarioKey(), span = { GridItemSpan(if (item is ScenarioListUiState.Item.SortItem || item is ScenarioListUiState.Item.ScenarioItem.Empty) maxLineSpan else 1) }) {
-                        ScenarioListContentItem(item, bitmapProvider, onLaunch, onExpand, onExport, onCopy, onDelete, onSortTypeClicked, onSmartChipClicked, onDumbChipClicked, onSortOrderClicked, Modifier)
+                        ScenarioListContentItem(item, bitmapProvider, onLaunch, onExpand, onExport, onCopy, onDelete, onRename, onSortTypeClicked, onSmartChipClicked, onDumbChipClicked, onSortOrderClicked, Modifier)
                     }
                 }
             }
             else -> LazyColumn(Modifier.fillMaxSize().padding(padding)) {
                 content.forEach { item ->
                     item(key = item.scenarioKey()) {
-                        ScenarioListContentItem(item, bitmapProvider, onLaunch, onExpand, onExport, onCopy, onDelete, onSortTypeClicked, onSmartChipClicked, onDumbChipClicked, onSortOrderClicked, Modifier)
+                        ScenarioListContentItem(item, bitmapProvider, onLaunch, onExpand, onExport, onCopy, onDelete, onRename, onSortTypeClicked, onSmartChipClicked, onDumbChipClicked, onSortOrderClicked, Modifier)
                     }
                 }
             }
@@ -153,6 +154,7 @@ private fun ScenarioListContentItem(
     onExport: (ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit,
     onCopy: (ScenarioListUiState.Item.ScenarioItem.Valid) -> Unit,
     onDelete: (ScenarioListUiState.Item.ScenarioItem) -> Unit,
+    onRename: (ScenarioListUiState.Item.ScenarioItem, String) -> Unit,
     onSortTypeClicked: (io.github.vibhor1102.macrion.core.settings.domain.model.ScenarioSortType) -> Unit,
     onSmartChipClicked: (Boolean) -> Unit,
     onDumbChipClicked: (Boolean) -> Unit,
@@ -160,7 +162,7 @@ private fun ScenarioListContentItem(
     modifier: Modifier,
 ) = when (item) {
     is ScenarioListUiState.Item.SortItem -> ScenarioSortControls(item, onSortTypeClicked, onSmartChipClicked, onDumbChipClicked, onSortOrderClicked, modifier)
-    is ScenarioListUiState.Item.ScenarioItem -> ScenarioListItem(item, bitmapProvider, onLaunch, onExpand, onExport, onCopy, onDelete, modifier)
+    is ScenarioListUiState.Item.ScenarioItem -> ScenarioListItem(item, bitmapProvider, onLaunch, onExpand, onExport, onCopy, onDelete, onRename, modifier)
 }
 
 @Composable

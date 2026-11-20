@@ -18,4 +18,16 @@
     <string name="notification_recorder_text">앱을 열어 평소처럼 눌러 주세요. 다 했으면 종료를 누르세요.</string>
     <string name="notification_recorder_stop">종료하고 저장</string>
     <string name="notification_recorder_cancel">취소</string>
+    <string name="dialog_title_recording_name">녹화 이름 짓기</string>
+    <string name="message_recording_name">알아보기 쉬운 이름을 지어 주세요. 예: \"아이스 아메리카노\". 홈 화면 바로가기에도 이 이름이 붙어요.</string>
+    <string name="hint_recording_name">이름</string>
+    <string name="button_recording_save">저장</string>
+    <string name="label_recording">녹화</string>
+    <string name="content_desc_run_now">바로 실행</string>
+    <string name="content_desc_rename">이름 바꾸기</string>
+    <string name="dialog_title_rename">이름 바꾸기</string>
+    <string name="button_rename_save">저장</string>
+    <string name="button_rename_cancel">취소</string>
+    <string name="toast_renamed">이름을 바꿨어요</string>
+    <string name="hint_scenario_name_required">이름을 지어 주세요. 예: \"커피 주문\"</string>
 </resources>

@@ -28,7 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -89,14 +92,16 @@ private fun ScenarioCreationContent(viewModel: ScenarioCreationViewModel, onDism
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
         ) {
+            val nameFocus = remember { FocusRequester() }
             MacrionTextField(
                 value = name,
                 onValueChange = viewModel::setName,
-                label = stringResource(R.string.input_field_label_scenario_name),
+                label = stringResource(R.string.hint_scenario_name_required),
                 isError = nameError,
                 maxLength = 60,
-                modifier = Modifier.padding(vertical = 12.dp),
+                modifier = Modifier.padding(vertical = 12.dp).focusRequester(nameFocus),
             )
+            LaunchedEffect(Unit) { runCatching { nameFocus.requestFocus() } }
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()

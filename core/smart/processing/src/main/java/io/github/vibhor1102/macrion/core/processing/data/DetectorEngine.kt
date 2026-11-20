@@ -325,7 +325,10 @@ class DetectorEngine @Inject constructor(
                 bitmapSupplier = bitmapRepository::getImageConditionBitmap,
                 androidExecutor = actionExecutor,
                 unblockWorkaroundEnabled = settingsRepository.isInputBlockWorkaroundEnabled(),
-                onStopRequested = { stopDetection() },
+                onStopRequested = {
+                    io.github.vibhor1102.macrion.core.base.ScenarioEndSignal.onFinishedByItself()
+                    stopDetection()
+                },
                 onScreenshotRateLimitExceeded = {
                     stopDetection()
                     _screenshotRateLimitError.tryEmit(settingsRepository.getScreenshotRateLimitPerMinute())

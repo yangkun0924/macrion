@@ -56,13 +56,13 @@ class ScenarioCreationViewModel @Inject constructor(
 ) : ViewModel() {
 
     fun reset() {
-        _name.value = context.getString(R.string.default_scenario_name)
+        // No default name: the user names the scenario right away, renaming it later is harder.
+        _name.value = ""
         _selectedType.value = ScenarioTypeSelection.SMART
         _creationState.value = CreationState.CONFIGURING
     }
 
-    private val _name: MutableStateFlow<String?> =
-        MutableStateFlow(context.getString(R.string.default_scenario_name))
+    private val _name: MutableStateFlow<String?> = MutableStateFlow("")
     val name: Flow<String> = _name
         .map { it ?: "" }
     val nameError: Flow<Boolean> = _name

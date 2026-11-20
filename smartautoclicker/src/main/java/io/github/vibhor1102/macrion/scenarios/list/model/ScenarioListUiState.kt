@@ -161,6 +161,8 @@ data class ScenarioListUiState(
                     val eventsItems: List<EventItem>,
                     val triggerEventCount: Int,
                     val detectionQuality: Int,
+                    /** Made with the tap recorder. */
+                    val isRecorded: Boolean = false,
                 ) : Valid(displayName = scenario.name) {
 
                     override fun getScenarioId(): Long = scenario.id.databaseId

@@ -19,6 +19,7 @@ package io.github.vibhor1102.macrion.scenarios.list
 
 import android.content.Context
 import io.github.vibhor1102.macrion.R
+import io.github.vibhor1102.macrion.recorder.RecordedScenarios
 import io.github.vibhor1102.macrion.core.domain.IRepository
 import io.github.vibhor1102.macrion.core.domain.model.scenario.Scenario
 import io.github.vibhor1102.macrion.core.dumb.domain.IDumbRepository
@@ -40,7 +41,7 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.minutes
 
 class FilteredScenarioListUseCase @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val context: Context,
     dumbRepository: IDumbRepository,
     private val settingsRepository: SettingsRepository,
     private val smartRepository: IRepository,
@@ -86,15 +87,18 @@ class FilteredScenarioListUseCase @Inject constructor(
         }
 
 
-    private suspend fun Scenario.toItem(): ScenarioListUiState.Item.ScenarioItem =
-        if (eventCount == 0) ScenarioListUiState.Item.ScenarioItem.Empty.Smart(
+    private suspend fun Scenario.toItem(): ScenarioListUiState.Item.ScenarioItem {
+        if (eventCount == 0) return ScenarioListUiState.Item.ScenarioItem.Empty.Smart(
             scenario = this,
             lastStartTimestamp = stats?.lastStartTimestampMs ?: 0,
             startCount = stats?.startCount ?: 0
         )
-        else ScenarioListUiState.Item.ScenarioItem.Valid.Smart(
+        val screenEvents = smartRepository.getScreenEvents(id.databaseId)
+        val triggerEvents = smartRepository.getTriggerEvents(id.databaseId)
+        return ScenarioListUiState.Item.ScenarioItem.Valid.Smart(
             scenario = this,
-            eventsItems = smartRepository.getScreenEvents(id.databaseId).map { event ->
+            isRecorded = RecordedScenarios.isRecorded(context, id.databaseId, screenEvents.size, triggerEvents),
+            eventsItems = screenEvents.map { event ->
                 ScenarioListUiState.Item.ScenarioItem.Valid.Smart.EventItem(
                     id = event.id.databaseId,
                     eventName = event.name,
@@ -103,11 +107,12 @@ class FilteredScenarioListUseCase @Inject constructor(
                     firstCondition = if (event.conditions.isNotEmpty()) event.conditions.first() else null,
                 )
             },
-            triggerEventCount = smartRepository.getTriggerEvents(id.databaseId).size,
+            triggerEventCount = triggerEvents.size,
             detectionQuality = detectionQuality,
             lastStartTimestamp = stats?.lastStartTimestampMs ?: 0,
             startCount = stats?.startCount ?: 0
         )
+    }
 
     private fun DumbScenario.toItem(context: Context): ScenarioListUiState.Item.ScenarioItem =
         if (dumbActions.isEmpty()) ScenarioListUiState.Item.ScenarioItem.Empty.Dumb(
@@ -154,6 +159,8 @@ private fun Collection<ScenarioListUiState.Item.ScenarioItem>.sortAndFilter(
 ): Collection<ScenarioListUiState.Item.ScenarioItem> {
 
     val filteredList = filter { item ->
+        // Recordings are always shown: they are not "smart" scenarios for the user.
+        (item is ScenarioListUiState.Item.ScenarioItem.Valid.Smart && item.isRecorded) ||
         (sortConfig.showSmartScenario && item.scenario is Scenario) ||
                 (sortConfig.showDumbScenario && item.scenario is DumbScenario)
     }

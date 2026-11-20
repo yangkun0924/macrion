@@ -96,6 +96,10 @@ interface ScenarioDao {
      *
      * @param scenarioId the identifier of the scenario to be deleted.
      */
+    /** Change only the name of a scenario. */
+    @Query("UPDATE scenario_table SET name = :name WHERE id = :scenarioId")
+    suspend fun rename(scenarioId: Long, name: String)
+
     @Query("DELETE FROM scenario_table WHERE id = :scenarioId")
     suspend fun delete(scenarioId: Long)
 
