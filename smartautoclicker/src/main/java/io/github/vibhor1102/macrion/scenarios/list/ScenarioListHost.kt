@@ -205,6 +205,12 @@ class ScenarioListHost(
                                     TextButton(
                                         onClick = {
                                             scenarioListViewModel.deleteScenario(currentDialog.item)
+                                            ScenarioShortcuts.onScenarioDeleted(
+                                                activity,
+                                                (currentDialog.item.scenario as? io.github.vibhor1102.macrion.core.domain.model.scenario.Scenario)?.id?.databaseId
+                                                    ?: (currentDialog.item.scenario as io.github.vibhor1102.macrion.core.dumb.domain.model.DumbScenario).id.databaseId,
+                                                isDumb = currentDialog.item.scenario is io.github.vibhor1102.macrion.core.dumb.domain.model.DumbScenario,
+                                            )
                                             dismissActiveDialog()
                                         },
                                     ) {
@@ -328,6 +334,7 @@ class ScenarioListHost(
         syncedShortcutNames = names
         ScenarioShortcuts.syncNames(activity, names)
     }
+
 
     private fun onConditionMigrationRequired(isRequired: Boolean) {
         if (!isRequired) return

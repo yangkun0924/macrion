@@ -10,7 +10,7 @@
     <string name="button_repeat_next">Next</string>
     <string name="button_repeat_cancel">Cancel</string>
     <string name="button_repeat_start">Start now</string>
-    <string name="button_repeat_shortcut">Add to home screen</string>
+    <string name="button_repeat_shortcut">Add a shortcut</string>
     <string name="message_repeat_confirm">%1$s runs %2$d times in a row, with a short pause between runs.\n\nPress Stop in the notification to stop at any time.</string>
     <string name="message_repeat_confirm_infinite">%1$s runs again and again until you stop it.\n\nPress Stop in the notification to stop.</string>
     <string name="toast_repeat_invalid_count">Enter a number from 1 to %1$d</string>

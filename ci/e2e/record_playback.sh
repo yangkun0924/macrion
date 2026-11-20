@@ -159,7 +159,13 @@ name_recording() {
   python3 "$HERE/ui.py" has "$LAST" "^$name\$" || fail "[$label] the typed name is not in the field"
   local pos; pos=$(python3 "$HERE/ui.py" find "$LAST" "^save$") || fail "[$label] 'Save' not found in the name dialog"
   adb shell input tap $pos
-  sleep 5
+  sleep 4
+  # Then where to put the play button: home screen, the app icon menu, or both.
+  dump "${label}_add_where"
+  pos=$(python3 "$HERE/ui.py" find "$LAST" "^both$") || fail "[$label] the 'where to add' choice did not show up"
+  log "[$label] add to the home screen and the app icon menu"
+  adb shell input tap $pos
+  sleep 4
 }
 
 # 4. Stop and save: same activity as the notification "Stop and save" button.
@@ -436,10 +442,19 @@ grep -qiE "^open source notice$END" "$OUT/settings_texts.txt" || fail "[settings
 grep -qiE "^troubleshooting$END" "$OUT/settings_texts.txt" || log "WARNING: troubleshooting item not seen"
 log "[settings] OK: no support area, open source notice shown"
 
+# Open the list once more: it publishes the app icon menu with both recordings.
+adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+sleep 5
+
 # Home screen with the shortcuts of both recordings: each one gets its own color (checked on the screenshot).
 adb shell input keyevent KEYCODE_HOME; sleep 3
 shot "home_shortcuts"
 adb shell dumpsys shortcut | grep -E "id=(smart|dumb)-scenario" | head -10 | tee -a "$RESULT"
+# Long press on the app icon (apps screen or home screen) lists the scenarios: dynamic shortcuts, recordings first.
+adb shell dumpsys shortcut | grep -E "id=smart-scenario-[0-9]+, .*Dyn" > "$OUT/app_icon_menu.txt"
+cat "$OUT/app_icon_menu.txt" | tee -a "$RESULT"
+[ "$(wc -l < "$OUT/app_icon_menu.txt")" -ge 2 ] || fail "[app icon menu] the recordings are not in the menu of the app icon"
+log "[app icon menu] OK: $(wc -l < "$OUT/app_icon_menu.txt") scenarios"
 
 adb logcat -d > "$OUT/logcat.txt"
 log "PASS"

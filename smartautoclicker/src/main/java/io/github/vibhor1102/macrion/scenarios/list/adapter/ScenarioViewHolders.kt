@@ -194,7 +194,7 @@ private fun DumbDetails(item: DumbScenarioItem, onCopy: () -> Unit, onDelete: ()
             onDelete = onDelete,
             onRename = onRename,
             onAddShortcut = {
-                ScenarioShortcuts.requestPinSmartScenario(context, item.scenario.id.databaseId, item.scenario.name, isDumb = true)
+                ScenarioShortcuts.chooseWhereToAdd(context, item.scenario.id.databaseId, item.scenario.name, isDumb = true)
             },
             onSchedule = { ScheduleDialogs.show(context, item.scenario.id.databaseId, item.scenario.name, isDumb = true) },
         )
@@ -240,7 +240,7 @@ private fun SmartDetails(
                 onDelete = onDelete,
                 onRename = onRename,
                 onAddShortcut = {
-                    ScenarioShortcuts.requestPinSmartScenario(context, item.scenario.id.databaseId, item.scenario.name)
+                    ScenarioShortcuts.chooseWhereToAdd(context, item.scenario.id.databaseId, item.scenario.name)
                 },
                 onSchedule = { ScheduleDialogs.show(context, item.scenario.id.databaseId, item.scenario.name) },
             )

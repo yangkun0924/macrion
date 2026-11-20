@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dialog_title_add_where">%1$s 어디에 추가할까요?</string>
+    <string name="item_add_where_home">홈 화면</string>
+    <string name="item_add_where_app_menu">앱스 화면 (터치터치 아이콘을 길게 누르면 나와요)</string>
+    <string name="item_add_where_both">둘 다</string>
+    <string name="item_add_where_remove_menu">앱스 화면 메뉴에서 빼기</string>
+    <string name="button_add_where_cancel">취소</string>
+    <string name="toast_added_app_menu">추가했어요. 앱스 화면에서 터치터치 아이콘을 길게 누른 뒤 이름을 누르면 실행돼요.</string>
+    <string name="toast_added_app_menu_full">추가했어요. 아이콘 메뉴에는 최대 %1$d개만 보여서 가장 오래된 것은 빠졌어요.</string>
+    <string name="toast_removed_app_menu">앱스 화면 메뉴에서 뺐어요</string>
+</resources>

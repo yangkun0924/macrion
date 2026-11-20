@@ -133,9 +133,11 @@ object RecorderController {
                 }
 
                 Toast.makeText(appContext, R.string.toast_recorder_saved, Toast.LENGTH_LONG).show()
-                activity.startActivity(Intent(activity, ScenarioActivity::class.java))
-                ScenarioShortcuts.requestPinSmartScenario(activity, saved.first, saved.second)
-                activity.finish()
+                // Where to put the play button: home screen, the TouchTouch icon menu, or both.
+                ScenarioShortcuts.chooseWhereToAdd(activity, saved.first, saved.second) {
+                    activity.startActivity(Intent(activity, ScenarioActivity::class.java))
+                    activity.finish()
+                }
             }
         }
     }

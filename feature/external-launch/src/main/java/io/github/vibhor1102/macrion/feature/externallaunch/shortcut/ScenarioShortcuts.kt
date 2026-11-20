@@ -1,6 +1,7 @@
 /* Copyright (C) 2026 Macrion contributors. Licensed under the GNU GPL v3 or later. */
 package io.github.vibhor1102.macrion.feature.externallaunch.shortcut
 
+import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -79,8 +80,11 @@ object ScenarioShortcuts {
      * keeps its shortcut). Scenarios are given as (id, name, isDumb).
      */
     fun syncNames(context: Context, scenarios: List<Triple<Long, String, Boolean>>) {
+        // The home screen shortcuts and the app icon menu.
         val pinned = try {
-            ShortcutManagerCompat.getShortcuts(context, ShortcutManagerCompat.FLAG_MATCH_PINNED)
+            ShortcutManagerCompat.getShortcuts(
+                context, ShortcutManagerCompat.FLAG_MATCH_PINNED or ShortcutManagerCompat.FLAG_MATCH_DYNAMIC,
+            )
         } catch (ex: Exception) {
             Log.w(TAG, "Can't read the pinned shortcuts", ex)
             return
@@ -99,6 +103,115 @@ object ScenarioShortcuts {
             }
         }
         if (changed.isNotEmpty()) update(context, changed)
+    }
+
+    /**
+     * Let the user choose where the play button goes: the home screen, the menu of the TouchTouch icon (long press it
+     * in the apps screen or on the home screen), or both.
+     * @param onDone called once the choice is made or the dialog closed.
+     */
+    fun chooseWhereToAdd(
+        context: Context,
+        scenarioId: Long,
+        scenarioName: String,
+        isDumb: Boolean = false,
+        repeatTimes: Int? = null,
+        onDone: () -> Unit = {},
+    ) {
+        val id = shortcutId(scenarioId, isDumb, repeatTimes)
+        val inMenu = id in menuIds(context)
+        val items = buildList {
+            add(context.getString(R.string.item_add_where_home))
+            add(context.getString(R.string.item_add_where_app_menu))
+            add(context.getString(R.string.item_add_where_both))
+            if (inMenu) add(context.getString(R.string.item_add_where_remove_menu))
+        }
+        val label = if (repeatTimes == null) scenarioName else repeatLabel(context, scenarioName, repeatTimes)
+        var done = false
+        val finish = { if (!done) { done = true; onDone() } }
+        AlertDialog.Builder(context)
+            .setTitle(context.getString(R.string.dialog_title_add_where, label))
+            .setItems(items.toTypedArray()) { _, index ->
+                // First let the caller show its screen: the launcher's "add to home screen" dialog must come on top.
+                finish()
+                // The caller's activity may be finishing now.
+                val app = context.applicationContext
+                when (index) {
+                    0 -> requestPinSmartScenario(app, scenarioId, scenarioName, isDumb, repeatTimes)
+                    1 -> addToAppIconMenu(app, scenarioId, scenarioName, isDumb, repeatTimes)
+                    2 -> {
+                        addToAppIconMenu(app, scenarioId, scenarioName, isDumb, repeatTimes)
+                        requestPinSmartScenario(app, scenarioId, scenarioName, isDumb, repeatTimes)
+                    }
+                    3 -> removeFromAppIconMenu(app, id)
+                }
+            }
+            .setNegativeButton(R.string.button_add_where_cancel, null)
+            .setOnDismissListener { finish() }
+            .show()
+    }
+
+    /** The menu shown when the TouchTouch icon is long pressed: newest first, launchers show only a few. */
+    private fun addToAppIconMenu(context: Context, scenarioId: Long, scenarioName: String, isDumb: Boolean, repeatTimes: Int?) {
+        val id = shortcutId(scenarioId, isDumb, repeatTimes)
+        val max = maxMenuEntries(context)
+        val ids = (listOf(id) + menuIds(context).filter { it != id })
+        val kept = ids.take(max)
+        val dropped = ids.drop(max)
+        saveMenuIds(context, kept)
+
+        val shortcut = ShortcutInfoCompat.Builder(
+            buildShortcut(context, id, scenarioId, scenarioName, isDumb, repeatTimes, colorFor(context, id, pinnedIds(context)))
+        ).setRank(0).build()
+        try {
+            if (dropped.isNotEmpty()) ShortcutManagerCompat.removeDynamicShortcuts(context, dropped)
+            ShortcutManagerCompat.pushDynamicShortcut(context, shortcut)
+            Log.i(TAG, "Added to the app icon menu: $id, menu $kept")
+        } catch (ex: Exception) {
+            Log.w(TAG, "Can't add to the app icon menu", ex)
+            return
+        }
+        val message =
+            if (dropped.isEmpty()) context.getString(R.string.toast_added_app_menu)
+            else context.getString(R.string.toast_added_app_menu_full, max)
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+    }
+
+    private fun removeFromAppIconMenu(context: Context, id: String) {
+        saveMenuIds(context, menuIds(context).filter { it != id })
+        try {
+            ShortcutManagerCompat.removeDynamicShortcuts(context, listOf(id))
+        } catch (ex: Exception) {
+            Log.w(TAG, "Can't remove from the app icon menu", ex)
+        }
+        Toast.makeText(context, R.string.toast_removed_app_menu, Toast.LENGTH_SHORT).show()
+    }
+
+    /** A scenario was deleted: take it out of the app icon menu. */
+    fun onScenarioDeleted(context: Context, scenarioId: Long, isDumb: Boolean) {
+        val base = shortcutId(scenarioId, isDumb, null)
+        val removed = menuIds(context).filter { it == base || it.startsWith("$base$REPEAT_SUFFIX") }
+        if (removed.isEmpty()) return
+        saveMenuIds(context, menuIds(context) - removed.toSet())
+        try {
+            ShortcutManagerCompat.removeDynamicShortcuts(context, removed)
+        } catch (ex: Exception) {
+            Log.w(TAG, "Can't remove from the app icon menu", ex)
+        }
+    }
+
+    private fun maxMenuEntries(context: Context): Int = try {
+        ShortcutManagerCompat.getMaxShortcutCountPerActivity(context).coerceIn(1, MENU_MAX_ENTRIES)
+    } catch (ex: Exception) {
+        MENU_MAX_ENTRIES
+    }
+
+    private fun menuIds(context: Context): List<String> =
+        context.getSharedPreferences(MENU_PREFS_NAME, Context.MODE_PRIVATE).getString(KEY_MENU_IDS, null)
+            ?.split(',')?.filter { it.isNotBlank() }.orEmpty()
+
+    private fun saveMenuIds(context: Context, ids: List<String>) {
+        context.getSharedPreferences(MENU_PREFS_NAME, Context.MODE_PRIVATE).edit { putString(KEY_MENU_IDS, ids.joinToString(",")) }
     }
 
     /** The label of a repeating run: "Coffee (3 times)", "Coffee (repeat)". */
@@ -229,5 +342,8 @@ private const val REPEAT_SUFFIX = "-repeat-"
 private const val SHORT_LABEL_MAX_LENGTH = 25
 private const val LONG_LABEL_MAX_LENGTH = 100
 private const val ICON_SIZE_PX = 432
+private const val MENU_MAX_ENTRIES = 5
+private const val MENU_PREFS_NAME = "app_icon_menu"
+private const val KEY_MENU_IDS = "ids"
 private const val DISC_RADIUS_DP = 21f
 private const val ARROW_HALF_HEIGHT_DP = 8.5f

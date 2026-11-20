@@ -72,7 +72,7 @@ object RepeatDialogs {
                 ScenarioRepeatRunner.start(context, scenarioId, scenarioName, isDumb, times)
             }
             .setNeutralButton(R.string.button_repeat_shortcut) { _, _ ->
-                ScenarioShortcuts.requestPinSmartScenario(context, scenarioId, scenarioName, isDumb, repeatTimes = times)
+                ScenarioShortcuts.chooseWhereToAdd(context, scenarioId, scenarioName, isDumb, repeatTimes = times)
             }
             .setNegativeButton(R.string.button_repeat_cancel, null)
             .show()

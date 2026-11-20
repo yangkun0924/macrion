@@ -63,5 +63,5 @@
     <string name="toast_shortcut_renamed">The home screen shortcut was renamed</string>
     <string name="toast_shortcut_not_supported">Your launcher does not support pinned shortcuts</string>
     <string name="toast_shortcut_scenario_not_found">This scenario no longer exists. Remove the shortcut and create a new one.</string>
-    <string name="action_add_home_shortcut">Add to home screen</string>
+    <string name="action_add_home_shortcut">Add a shortcut</string>
 </resources>

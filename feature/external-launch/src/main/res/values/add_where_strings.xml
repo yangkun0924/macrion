@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dialog_title_add_where">Where to put %1$s?</string>
+    <string name="item_add_where_home">Home screen</string>
+    <string name="item_add_where_app_menu">TouchTouch icon menu (long press the icon in the apps screen)</string>
+    <string name="item_add_where_both">Both</string>
+    <string name="item_add_where_remove_menu">Remove from the TouchTouch icon menu</string>
+    <string name="button_add_where_cancel">Cancel</string>
+    <string name="toast_added_app_menu">Added. Long press the TouchTouch icon in the apps screen and touch it to run.</string>
+    <string name="toast_added_app_menu_full">Added. The icon menu shows %1$d at most: the oldest one was taken out.</string>
+    <string name="toast_removed_app_menu">Removed from the TouchTouch icon menu</string>
+</resources>
