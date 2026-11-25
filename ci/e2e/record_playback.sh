@@ -205,7 +205,7 @@ reset_apps() {
 # Check that a playback started directly (no screen sharing dialog) and ended on the recorded screen.
 check_playback() {
   local label="$1"
-  local since; since=$(adb shell date +'%m-%d %H:%M:%S.000' | tr -d '\r')
+  local since; since=$(adb shell "date '+%m-%d %H:%M:%S.000'" | tr -d '\r')
   sleep 4
   shot "${label}_start"
   local focus; focus=$(focused_window)
@@ -347,7 +347,7 @@ adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select id,priority,name,type,s
 adb shell "sqlite3 /data/data/$PKG/databases/$DB \"select count(*) from action_table where eventId=$EVENT and system_action_type='CLOSE_APP';\"" | tr -d '\r' | grep -qx 1 \
   || fail "[close_app] could not add the close app action"
 reset_apps
-since=$(adb shell date +'%m-%d %H:%M:%S.000' | tr -d '\r')
+since=$(adb shell "date '+%m-%d %H:%M:%S.000'" | tr -d '\r')
 adb shell am start -n "$PKG/$LAUNCHER_ACTIVITY" --el "$EXTRA_ID" "$ID" | tee -a "$RESULT"
 CLOSED=""
 for _ in $(seq 1 15); do
