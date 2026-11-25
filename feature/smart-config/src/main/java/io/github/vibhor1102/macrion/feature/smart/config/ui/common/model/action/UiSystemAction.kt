@@ -35,4 +35,5 @@ internal fun SystemAction.Type.toDisplayString(context: Context): String =
         SystemAction.Type.BACK -> context.getString(R.string.field_dropdown_system_action_type_back)
         SystemAction.Type.HOME -> context.getString(R.string.field_dropdown_system_action_type_home)
         SystemAction.Type.RECENT_APPS -> context.getString(R.string.field_dropdown_system_action_type_recent_apps)
+        SystemAction.Type.CLOSE_APP -> context.getString(R.string.field_dropdown_system_action_type_close_app)
     }

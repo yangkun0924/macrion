@@ -195,6 +195,8 @@ enum class SystemActionType {
     HOME,
     /** Open recent apps screen. */
     RECENT_APPS,
+    /** Close the app used last: swipe its card away in the recent apps screen, then go home. */
+    CLOSE_APP,
 }
 
 

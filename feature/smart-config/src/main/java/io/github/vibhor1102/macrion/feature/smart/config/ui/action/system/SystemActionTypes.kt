@@ -37,6 +37,10 @@ sealed class SystemActionTypeItem(
     data object RecentApps : SystemActionTypeItem(
         title = R.string.field_dropdown_system_action_type_recent_apps,
     )
+
+    data object CloseApp : SystemActionTypeItem(
+        title = R.string.field_dropdown_system_action_type_close_app,
+    )
 }
 
 internal val systemActionTypeItems: List<SystemActionTypeItem>
@@ -44,6 +48,7 @@ internal val systemActionTypeItems: List<SystemActionTypeItem>
         SystemActionTypeItem.Back,
         SystemActionTypeItem.Home,
         SystemActionTypeItem.RecentApps,
+        SystemActionTypeItem.CloseApp,
     )
 
 internal fun SystemAction.Type.toTypeItem(): SystemActionTypeItem =
@@ -51,6 +56,7 @@ internal fun SystemAction.Type.toTypeItem(): SystemActionTypeItem =
         SystemAction.Type.BACK -> SystemActionTypeItem.Back
         SystemAction.Type.HOME -> SystemActionTypeItem.Home
         SystemAction.Type.RECENT_APPS -> SystemActionTypeItem.RecentApps
+        SystemAction.Type.CLOSE_APP -> SystemActionTypeItem.CloseApp
     }
 
 internal fun SystemActionTypeItem.toSystemActionType(): SystemAction.Type =
@@ -58,4 +64,5 @@ internal fun SystemActionTypeItem.toSystemActionType(): SystemAction.Type =
         SystemActionTypeItem.Back -> SystemAction.Type.BACK
         SystemActionTypeItem.Home -> SystemAction.Type.HOME
         SystemActionTypeItem.RecentApps -> SystemAction.Type.RECENT_APPS
+        SystemActionTypeItem.CloseApp -> SystemAction.Type.CLOSE_APP
     }

@@ -205,6 +205,7 @@ reset_apps() {
 # Check that a playback started directly (no screen sharing dialog) and ended on the recorded screen.
 check_playback() {
   local label="$1"
+  local since; since=$(adb shell date +'%m-%d %H:%M:%S.000' | tr -d '\r')
   sleep 4
   shot "${label}_start"
   local focus; focus=$(focused_window)
@@ -216,6 +217,7 @@ check_playback() {
   sleep 20
   TOP=$(top_package)
   log "[$label] app on screen after playback: $TOP"
+  check_menu_closed "$label" "$since"
   dump "${label}_end_screen"
   [ "$TOP" = "$TARGET" ] || fail "[$label] playback opened '$TOP' instead of '$TARGET'"
   SIMILARITY=$(python3 - "$EXPECTED" "$LAST" <<'EOF2'
@@ -230,6 +232,16 @@ EOF2
   python3 -c "import sys; sys.exit(0 if float('$SIMILARITY') >= 0.6 else 1)" || fail "[$label] playback did not end on the recorded screen"
   sleep 3 # service binds again after the dump
   log "[$label] OK"
+}
+
+# A one tap launch closes the floating menu by itself once the scenario is done. Checked before any screen dump
+# (a dump unbinds the accessibility service, which closes the menu anyway).
+check_menu_closed() {
+  local label="$1" since="$2"
+  shot "${label}_menu_closed"
+  adb logcat -d -T "$since" | grep -q "LocalService.*ended by itself, closing the menu" \
+    || fail "[$label] the floating menu was not closed after the scenario ended"
+  log "[$label] floating menu closed by itself"
 }
 
 RECEIVER=io.github.vibhor1102.macrion.feature.externallaunch.schedule.ScheduleReceiver
@@ -325,6 +337,33 @@ TAPS_REPEAT=$(adb logcat -d | grep -c "ServiceActionExecutor: Tapped element")
 log "[repeat] element taps during the repeat: $TAPS_REPEAT (one run: $TAPS_ONE_RUN)"
 [ "$TAPS_ONE_RUN" -gt 0 ] && [ "$TAPS_REPEAT" -lt $((TAPS_ONE_RUN * 2)) ] && fail "[repeat] the second run did not tap like the first one"
 log "[repeat] OK: 2 runs"
+
+# 8. "Close app" system action: added at the end of the recording (before its finish step), the playback opens
+#    Settings, taps, then closes Settings (swiped away from the recent apps) and ends on the home screen.
+EVENT=$(adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select id from event_table where scenario_id=$ID limit 1;'" | tr -d '\r')
+[[ "$EVENT" =~ ^[0-9]+$ ]] || fail "[close_app] event of the recording not found ($EVENT)"
+adb shell "sqlite3 /data/data/$PKG/databases/$DB \"update action_table set priority=priority+1 where eventId=$EVENT and type='TOGGLE_EVENT'; insert into action_table (eventId, priority, name, type, system_action_type) values ($EVENT, (select max(priority) from action_table where eventId=$EVENT) - 1, 'Close app', 'SYSTEM', 'CLOSE_APP');\""
+adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select id,priority,name,type,system_action_type from action_table where eventId=$EVENT order by priority;'" | tee -a "$RESULT"
+adb shell "sqlite3 /data/data/$PKG/databases/$DB \"select count(*) from action_table where eventId=$EVENT and system_action_type='CLOSE_APP';\"" | tr -d '\r' | grep -qx 1 \
+  || fail "[close_app] could not add the close app action"
+reset_apps
+since=$(adb shell date +'%m-%d %H:%M:%S.000' | tr -d '\r')
+adb shell am start -n "$PKG/$LAUNCHER_ACTIVITY" --el "$EXTRA_ID" "$ID" | tee -a "$RESULT"
+CLOSED=""
+for _ in $(seq 1 15); do
+  sleep 3
+  if adb logcat -d -T "$since" | grep -q "ServiceActionExecutor: Close app: swiped"; then CLOSED=1; break; fi
+done
+sleep 4
+echo "--- close app logcat"
+adb logcat -d -T "$since" | grep -E " (ServiceActionExecutor|LocalService)" | tail -20
+[ -n "$CLOSED" ] || fail "[close_app] the close app action did not run"
+check_menu_closed "close_app" "$since"
+TOP=$(top_package); log "[close_app] app on screen after playback: $TOP"
+adb shell dumpsys activity recents | grep -E "Recent #|realActivity" | head -10 | tee "$OUT/recents_after_close.txt"
+[ "$TOP" != "$TARGET" ] || fail "[close_app] Settings is still on the screen"
+adb shell dumpsys activity recents | grep -E "Recent #" | grep -q "$TARGET" && fail "[close_app] Settings is still in the recent apps"
+log "[close_app] OK: Settings closed and removed from the recent apps"
 
 # 5. Web page menu, like the company app: native screen -> "Order menu" -> web page -> "Coffee" tab -> scroll to the
 #    bottom -> "Iced americano". The playback must scroll by itself to find the item.

@@ -408,10 +408,15 @@ internal class ActionExecutor(
     }
 
     private suspend fun executeSystemAction(action: SystemAction) {
+        if (action.type == SystemAction.Type.CLOSE_APP) {
+            androidExecutor.closeLastApp()
+            return
+        }
         val globalAction = when (action.type) {
             SystemAction.Type.BACK -> AccessibilityService.GLOBAL_ACTION_BACK
             SystemAction.Type.HOME -> AccessibilityService.GLOBAL_ACTION_HOME
             SystemAction.Type.RECENT_APPS -> AccessibilityService.GLOBAL_ACTION_RECENTS
+            SystemAction.Type.CLOSE_APP -> return
         }
 
         withContext(Dispatchers.Main) {

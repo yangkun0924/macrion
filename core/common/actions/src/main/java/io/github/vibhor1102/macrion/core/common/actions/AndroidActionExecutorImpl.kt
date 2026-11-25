@@ -119,6 +119,41 @@ internal class AndroidActionExecutorImpl @Inject constructor(
         }
     }
 
+    override suspend fun closeLastApp() {
+        val service = accessibilityService ?: return
+        val before = withContext(Dispatchers.Main.immediate) { service.activeWindowPackage() }
+        Log.i(TAG, "Close app: opening recent apps (app in front: $before)")
+        withContext(Dispatchers.Main.immediate) { performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS) }
+
+        // Wait for the recent apps screen, then for its opening animation to end.
+        val deadline = System.currentTimeMillis() + CLOSE_APP_RECENTS_TIMEOUT_MS
+        while (System.currentTimeMillis() < deadline) {
+            delay(CLOSE_APP_POLL_MS)
+            val now = withContext(Dispatchers.Main.immediate) { service.activeWindowPackage() }
+            if (now != null && now != before) break
+        }
+        delay(CLOSE_APP_SETTLE_MS)
+
+        // The card of the app used last is in the middle of the screen: fling it up to close it.
+        val metrics = service.resources.displayMetrics
+        val x = metrics.widthPixels / 2f
+        val path = Path().apply {
+            moveTo(x, metrics.heightPixels * 0.5f)
+            lineTo(x, metrics.heightPixels * 0.08f)
+        }
+        dispatchGesture(
+            GestureDescription.Builder()
+                .addStroke(GestureDescription.StrokeDescription(path, 0L, CLOSE_APP_SWIPE_DURATION_MS))
+                .build()
+        )
+        delay(CLOSE_APP_SETTLE_MS)
+        withContext(Dispatchers.Main.immediate) { performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME) }
+        Log.i(TAG, "Close app: swiped the last app away ($before)")
+    }
+
+    private fun AccessibilityService.activeWindowPackage(): String? =
+        try { rootInActiveWindow?.packageName?.toString() } catch (_: Exception) { null }
+
     override fun writeTextOnFocusedItem(text: String, validate: Boolean) {
         val service = accessibilityService ?: return
 
@@ -259,6 +294,10 @@ private const val TAG = "ServiceActionExecutor"
 
 private const val ELEMENT_POLL_INTERVAL_MS = 250L
 private const val ELEMENT_TAP_DURATION_MS = 50L
+private const val CLOSE_APP_RECENTS_TIMEOUT_MS = 2_000L
+private const val CLOSE_APP_POLL_MS = 100L
+private const val CLOSE_APP_SETTLE_MS = 700L
+private const val CLOSE_APP_SWIPE_DURATION_MS = 200L
 private const val ELEMENT_SCROLL_SEARCH_AFTER_MS = 1_500L
 private const val ELEMENT_SCROLL_SETTLE_MS = 600L
 private const val ELEMENT_STILL_CHECK_MS = 200L

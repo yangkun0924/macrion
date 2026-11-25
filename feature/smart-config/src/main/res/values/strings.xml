@@ -127,7 +127,7 @@
     <string name="item_notification_details_text">Send \"%1$s\"</string>
 
     <string name="item_system_action_title">System action</string>
-    <string name="item_system_action_desc">Use an Android system action (back, home or recent apps)</string>
+    <string name="item_system_action_desc">Use an Android system action (back, home, recent apps or close app)</string>
     <string name="item_system_action_details_text">%1$s</string>
 
     <string name="item_set_text_title">Write text</string>
@@ -570,6 +570,7 @@
     <string name="field_dropdown_system_action_type_back">Back</string>
     <string name="field_dropdown_system_action_type_home">Home</string>
     <string name="field_dropdown_system_action_type_recent_apps">Recent apps</string>
+    <string name="field_dropdown_system_action_type_close_app">Close app (the one used last)</string>
 
 
     <!-- Dialogs Action WriteText ================================================================================== -->

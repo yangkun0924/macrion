@@ -38,7 +38,9 @@ data class SystemAction(
         /** Return to home launcher. */
         HOME,
         /** Open recent apps screen. */
-        RECENT_APPS;
+        RECENT_APPS,
+        /** Close the app used last: swipe its card away in the recent apps screen, then go home. */
+        CLOSE_APP;
 
         fun toEntity(): SystemActionType = SystemActionType.valueOf(name)
     }

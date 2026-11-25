@@ -26,6 +26,7 @@ import android.media.projection.MediaProjectionManager
 import android.util.Log
 import android.view.KeyEvent
 
+import io.github.vibhor1102.macrion.core.base.ScenarioEndSignal
 import io.github.vibhor1102.macrion.core.base.data.AppComponentsProvider
 import io.github.vibhor1102.macrion.core.common.accessibility.domain.LocalAccessibilityService
 import io.github.vibhor1102.macrion.core.common.overlays.manager.OverlayManager
@@ -83,6 +84,9 @@ class LocalService(
     private val serviceScope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     /** Coroutine job for the delayed start of engine & ui. */
     private var startJob: Job? = null
+
+    /** Closes the menu when a one tap launch (shortcut, schedule, repeat) ends by itself. */
+    private var autoCloseJob: Job? = null
     /** Coroutine job for the paywall result upon start from notification. */
     private var paywallResultJob: Job? = null
     /** Prevents repeated notification taps from opening multiple switcher pickers during pause settling. */
@@ -189,6 +193,7 @@ class LocalService(
             // One tap launches (home screen shortcut, schedule) start right away.
             if (autoStart) {
                 Log.i(TAG, "Auto starting dumb scenario ${dumbScenario.id.databaseId}")
+                closeMenuWhenFinishedByItself(state.sessionId)
                 dumbEngine.startDumbScenario()
             }
         }
@@ -261,11 +266,35 @@ class LocalService(
                 // One tap launches (home screen shortcut, schedule): the menu was just shown, start right away
                 // instead of waiting for the user to press Play in it.
                 Log.i(TAG, "Auto starting scenario ${scenario.id.databaseId}")
+                closeMenuWhenFinishedByItself(state.sessionId)
                 if (shouldStartPaywall()) startPaywall(onlyIfRootVisible = false)
                 else startSmartScenario(onlyIfRootVisible = false)
             }
         }
         return true
+    }
+
+    /**
+     * After a one tap launch, nobody is in front of the menu to close it: once the scenario has run and ended by
+     * itself (all steps done), close the menu like the stop button does. A pause or a stop from the user keeps the
+     * usual behaviour.
+     */
+    private fun closeMenuWhenFinishedByItself(sessionId: Long) {
+        autoCloseJob?.cancel()
+        val endedBefore = ScenarioEndSignal.count
+        autoCloseJob = serviceScope.launch {
+            val isRunning = combine(dumbEngine.isRunning, smartProcessingRepository.detectionState) { dumb, smart ->
+                dumb || smart == DetectionState.DETECTING
+            }
+            withTimeoutOrNull(AUTO_CLOSE_START_TIMEOUT_MS) { isRunning.first { it } } ?: return@launch
+            isRunning.first { !it }
+            delay(AUTO_CLOSE_DELAY_MS)
+
+            if (state.sessionId != sessionId || !state.isStarted) return@launch
+            if (ScenarioEndSignal.count == endedBefore || isScenarioRunning()) return@launch
+            Log.i(TAG, "Auto started scenario ended by itself, closing the menu")
+            stopScenario()
+        }
     }
 
     private fun isCleanForFreshLaunch(): Boolean =
@@ -331,6 +360,8 @@ class LocalService(
         state = state.copy(isStarted = false, isSmartLoaded = false)
         scenarioSwitcherOpeningJob?.cancel()
         scenarioSwitcherOpeningJob = null
+        autoCloseJob?.cancel()
+        autoCloseJob = null
         loadedDumbScenarioId = null
         onScenarioStateChanged()
 
@@ -566,6 +597,8 @@ class LocalService(
 
 private const val SCENARIO_SWITCHER_PAUSE_TIMEOUT_MS = 5_000L
 private const val SCENARIO_STOP_TIMEOUT_MS = 5_000L
+private const val AUTO_CLOSE_START_TIMEOUT_MS = 60_000L
+private const val AUTO_CLOSE_DELAY_MS = 300L
 private const val TAG = "LocalService"
 
 internal enum class NotificationDismissAction {
