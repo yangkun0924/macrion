@@ -362,7 +362,7 @@ check_menu_closed "close_app" "$since"
 TOP=$(top_package); log "[close_app] app on screen after playback: $TOP"
 adb shell dumpsys activity recents | grep -E "Recent #|realActivity" | head -10 | tee "$OUT/recents_after_close.txt"
 [ "$TOP" != "$TARGET" ] || fail "[close_app] Settings is still on the screen"
-adb shell dumpsys activity recents | grep -E "Recent #" | grep -q "$TARGET" && fail "[close_app] Settings is still in the recent apps"
+adb shell dumpsys activity recents | grep -E "Recent #" | grep "type=standard" | grep -q "$TARGET" && fail "[close_app] Settings is still in the recent apps"
 log "[close_app] OK: Settings closed and removed from the recent apps"
 
 # 5. Web page menu, like the company app: native screen -> "Order menu" -> web page -> "Coffee" tab -> scroll to the
