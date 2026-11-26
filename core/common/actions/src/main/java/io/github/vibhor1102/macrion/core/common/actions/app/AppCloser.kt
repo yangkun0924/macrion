@@ -132,6 +132,13 @@ internal class AppCloser @Inject constructor() {
                 clickable = clickable.parent
                 depth++
             }
+            if (clickable == null || !clickable.isClickable) {
+                // A label under its icon button (Pixel App info): the button is a sibling of the label.
+                clickable = node.parent?.let { parent ->
+                    (0 until parent.childCount).asSequence().mapNotNull { parent.getChild(it) }
+                        .firstOrNull { it.isClickable }
+                }
+            }
             if (clickable == null || !clickable.isClickable) continue
             if (!clickable.isEnabled || !node.isEnabled) continue
             if (clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
