@@ -2,8 +2,11 @@
 package io.github.vibhor1102.macrion.core.common.actions.app
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Path
+import android.graphics.Rect
 import android.net.Uri
 import android.provider.Settings
 import android.util.Log
@@ -89,7 +92,7 @@ internal class AppCloser @Inject constructor() {
             delay(POLL_MS)
             val clicked = withContext(Dispatchers.Main.immediate) {
                 val roots = if (activeWindowOnly) listOfNotNull(service.rootInActiveWindow) else service.settingsRoots()
-                roots.any { root -> root.clickFirst(ids, texts) }
+                roots.any { root -> service.clickFirst(root, ids, texts) }
             }
             if (clicked) return true
         }
@@ -119,13 +122,21 @@ internal class AppCloser @Inject constructor() {
         return (listOfNotNull(rootInActiveWindow) + roots).filter { it.packageName?.toString() != packageName }
     }
 
-    private fun AccessibilityNodeInfo.clickFirst(ids: List<String>, texts: List<String>): Boolean {
-        val byId = ids.asSequence().flatMap { id -> findAccessibilityNodeInfosByViewId(id).orEmpty().asSequence() }
-        val byText = texts.asSequence().flatMap { text ->
-            findAccessibilityNodeInfosByText(text).orEmpty().asSequence()
-                .filter { node -> node.text?.toString()?.trim()?.equals(text, ignoreCase = true) == true }
+    private fun AccessibilityService.clickFirst(root: AccessibilityNodeInfo, ids: List<String>, texts: List<String>): Boolean {
+        val byId = ids.flatMap { id -> root.findAccessibilityNodeInfosByViewId(id).orEmpty() }
+        // Walk the tree ourselves: the label can be a text or a content description, and may not be returned by
+        // findAccessibilityNodeInfosByText.
+        val byText = ArrayList<AccessibilityNodeInfo>()
+        fun walk(node: AccessibilityNodeInfo?, depth: Int) {
+            if (node == null || depth > MAX_TREE_DEPTH) return
+            val label = (node.text ?: node.contentDescription)?.toString()?.trim()
+            if (label != null && texts.any { it.equals(label, ignoreCase = true) }) byText += node
+            for (i in 0 until node.childCount) walk(node.getChild(i), depth + 1)
         }
+        walk(root, 0)
+
         for (node in byId + byText) {
+            if (!node.isEnabled) continue
             var clickable: AccessibilityNodeInfo? = node
             var depth = 0
             while (clickable != null && !clickable.isClickable && depth < MAX_PARENT_DEPTH) {
@@ -134,17 +145,33 @@ internal class AppCloser @Inject constructor() {
             }
             if (clickable == null || !clickable.isClickable) {
                 // A label under its icon button (Pixel App info): the button is a sibling of the label.
+                // Only the one right above or around the label, never another button of the row.
+                val label = Rect().also(node::getBoundsInScreen)
                 clickable = node.parent?.let { parent ->
                     (0 until parent.childCount).asSequence().mapNotNull { parent.getChild(it) }
-                        .firstOrNull { it.isClickable }
+                        .filter { it.isClickable }
+                        .filter { child ->
+                            val b = Rect().also(child::getBoundsInScreen)
+                            label.centerX() in b.left..b.right && label.top - b.bottom < label.height() * 3
+                        }
+                        .minByOrNull { child -> kotlin.math.abs(Rect().also(child::getBoundsInScreen).centerY() - label.centerY()) }
                 }
             }
-            if (clickable == null || !clickable.isClickable) continue
-            if (!clickable.isEnabled || !node.isEnabled) continue
-            if (clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-                Log.d(TAG, "Close app: clicked '${node.text ?: node.viewIdResourceName}'")
+            if (clickable != null && clickable.isClickable && !clickable.isEnabled) continue
+            if (clickable != null && clickable.isClickable && clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                Log.i(TAG, "Close app: clicked '${node.text ?: node.contentDescription ?: node.viewIdResourceName}'")
                 return true
             }
+            // Last resort: touch the middle of the label, like a finger.
+            val bounds = Rect().also(node::getBoundsInScreen)
+            if (bounds.isEmpty) continue
+            val path = Path().apply { moveTo(bounds.exactCenterX(), bounds.exactCenterY()) }
+            val sent = dispatchGesture(
+                GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(path, 0L, TAP_MS)).build(),
+                null, null,
+            )
+            Log.i(TAG, "Close app: tapped '${node.text ?: node.contentDescription}' at ${bounds.centerX()},${bounds.centerY()}: $sent")
+            if (sent) return true
         }
         return false
     }
@@ -184,4 +211,6 @@ private const val FIND_TIMEOUT_MS = 8_000L
 private const val POLL_MS = 250L
 private const val SETTLE_MS = 600L
 private const val MAX_PARENT_DEPTH = 4
+private const val MAX_TREE_DEPTH = 40
+private const val TAP_MS = 60L
 private const val TAG = "AppCloser"
