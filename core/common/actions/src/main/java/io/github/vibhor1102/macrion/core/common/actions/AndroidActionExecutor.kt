@@ -78,10 +78,10 @@ interface AndroidActionExecutor: Dumpable {
     fun performGlobalAction(globalAction: Int)
 
     /**
-     * Close the app used last, without root: open the recent apps screen, swipe the card of that app away (like the
-     * user would), then go back to the home screen.
+     * Close the app the scenario opened or touched (only that one), without root: force stop it from its App info
+     * page, then go back to the home screen.
      */
-    suspend fun closeLastApp()
+    suspend fun closeAutomatedApp()
 
     /**
      * Action that sets the text of the currently focused item on the screen.

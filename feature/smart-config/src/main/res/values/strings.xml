@@ -570,7 +570,7 @@
     <string name="field_dropdown_system_action_type_back">Back</string>
     <string name="field_dropdown_system_action_type_home">Home</string>
     <string name="field_dropdown_system_action_type_recent_apps">Recent apps</string>
-    <string name="field_dropdown_system_action_type_close_app">Close app (the one used last)</string>
+    <string name="field_dropdown_system_action_type_close_app">Close app (the one the scenario used)</string>
 
 
     <!-- Dialogs Action WriteText ================================================================================== -->

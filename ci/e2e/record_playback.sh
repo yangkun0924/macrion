@@ -338,33 +338,6 @@ log "[repeat] element taps during the repeat: $TAPS_REPEAT (one run: $TAPS_ONE_R
 [ "$TAPS_ONE_RUN" -gt 0 ] && [ "$TAPS_REPEAT" -lt $((TAPS_ONE_RUN * 2)) ] && fail "[repeat] the second run did not tap like the first one"
 log "[repeat] OK: 2 runs"
 
-# 8. "Close app" system action: added at the end of the recording (before its finish step), the playback opens
-#    Settings, taps, then closes Settings (swiped away from the recent apps) and ends on the home screen.
-EVENT=$(adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select id from event_table where scenario_id=$ID limit 1;'" | tr -d '\r')
-[[ "$EVENT" =~ ^[0-9]+$ ]] || fail "[close_app] event of the recording not found ($EVENT)"
-adb shell "sqlite3 /data/data/$PKG/databases/$DB \"update action_table set priority=priority+1 where eventId=$EVENT and type='TOGGLE_EVENT'; insert into action_table (eventId, priority, name, type, system_action_type) values ($EVENT, (select max(priority) from action_table where eventId=$EVENT) - 1, 'Close app', 'SYSTEM', 'CLOSE_APP');\""
-adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select id,priority,name,type,system_action_type from action_table where eventId=$EVENT order by priority;'" | tee -a "$RESULT"
-adb shell "sqlite3 /data/data/$PKG/databases/$DB \"select count(*) from action_table where eventId=$EVENT and system_action_type='CLOSE_APP';\"" | tr -d '\r' | grep -qx 1 \
-  || fail "[close_app] could not add the close app action"
-reset_apps
-since=$(adb shell "date '+%m-%d %H:%M:%S.000'" | tr -d '\r')
-adb shell am start -n "$PKG/$LAUNCHER_ACTIVITY" --el "$EXTRA_ID" "$ID" | tee -a "$RESULT"
-CLOSED=""
-for _ in $(seq 1 15); do
-  sleep 3
-  if adb logcat -d -T "$since" | grep -q "ServiceActionExecutor: Close app: swiped"; then CLOSED=1; break; fi
-done
-sleep 4
-echo "--- close app logcat"
-adb logcat -d -T "$since" | grep -E " (ServiceActionExecutor|LocalService)" | tail -20
-[ -n "$CLOSED" ] || fail "[close_app] the close app action did not run"
-check_menu_closed "close_app" "$since"
-TOP=$(top_package); log "[close_app] app on screen after playback: $TOP"
-adb shell dumpsys activity recents | grep -E "Recent #|realActivity" | head -10 | tee "$OUT/recents_after_close.txt"
-[ "$TOP" != "$TARGET" ] || fail "[close_app] Settings is still on the screen"
-adb shell dumpsys activity recents | grep -E "Recent #" | grep "type=standard" | grep -q "$TARGET" && fail "[close_app] Settings is still in the recent apps"
-log "[close_app] OK: Settings closed and removed from the recent apps"
-
 # 5. Web page menu, like the company app: native screen -> "Order menu" -> web page -> "Coffee" tab -> scroll to the
 #    bottom -> "Iced americano". The playback must scroll by itself to find the item.
 if [ -n "$WEB_APK" ]; then
@@ -457,6 +430,38 @@ if [ -n "$WEB_APK" ]; then
   adb logcat -d | grep -E " (ElementTap[A-Za-z]*|ServiceActionExecutor)" | tail -30
   [ -z "${WEB_REC_FAIL:-}" ] || fail "[web] recording incomplete: $WEB_REC_FAIL"
   log "[web] OK: recorded and ordered by the playback"
+
+  # 8. "Close app" system action, added after the last tap of the web recording: the playback orders, then closes
+  #    the web app only (force stopped from its App info page). Another app opened before must keep running.
+  EVENT=$(adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select id from event_table where scenario_id=$WID limit 1;'" | tr -d '\r')
+  [[ "$EVENT" =~ ^[0-9]+$ ]] || fail "[close_app] event of the web recording not found ($EVENT)"
+  adb shell "sqlite3 /data/data/$PKG/databases/$DB \"update action_table set priority=priority+1 where eventId=$EVENT and type='TOGGLE_EVENT'; insert into action_table (eventId, priority, name, type, system_action_type) values ($EVENT, (select max(priority) from action_table where eventId=$EVENT) - 1, 'Close app', 'SYSTEM', 'CLOSE_APP');\""
+  adb shell "sqlite3 /data/data/$PKG/databases/$DB 'select id,priority,name,type,system_action_type from action_table where eventId=$EVENT order by priority;'" | tee -a "$RESULT"
+  adb shell "sqlite3 /data/data/$PKG/databases/$DB \"select count(*) from action_table where eventId=$EVENT and system_action_type='CLOSE_APP';\"" | tr -d '\r' | grep -qx 1 \
+    || fail "[close_app] could not add the close app action"
+  adb shell am force-stop $WEB
+  OTHER="${DECOY:-com.android.settings}"
+  adb shell monkey -p $OTHER -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; sleep 3
+  adb shell input keyevent KEYCODE_HOME; sleep 2
+  [ -n "$(adb shell pidof $OTHER | tr -d '\r')" ] || log "WARNING: $OTHER is not running before the playback"
+  since=$(adb shell "date '+%m-%d %H:%M:%S.000'" | tr -d '\r')
+  adb shell am start -n "$PKG/$LAUNCHER_ACTIVITY" --el "$EXTRA_ID" "$WID" | tee -a "$RESULT"
+  CLOSED=""
+  for _ in $(seq 1 25); do
+    sleep 3
+    if adb logcat -d -T "$since" | grep -q "AppCloser: Close app: $WEB force stopped=true"; then CLOSED=1; break; fi
+  done
+  sleep 4
+  echo "--- close app logcat"
+  adb logcat -d -T "$since" | grep -E " (AppCloser|ServiceActionExecutor|LocalService)" | tail -25
+  shot "close_app_end"
+  [ -n "$CLOSED" ] || fail "[close_app] the web app was not force stopped"
+  check_menu_closed "close_app" "$since"
+  TOP=$(top_package); log "[close_app] app on screen after playback: $TOP"
+  [ "$TOP" != "$WEB" ] || fail "[close_app] the web app is still on the screen"
+  [ -z "$(adb shell pidof $WEB | tr -d '\r')" ] || fail "[close_app] the web app is still running"
+  [ -n "$(adb shell pidof $OTHER | tr -d '\r')" ] || fail "[close_app] $OTHER was closed too: only the app of the scenario must be closed"
+  log "[close_app] OK: only the web app was closed, $OTHER still runs"
 fi
 
 # Settings: the "Support" area (GitHub, Discord, bug report) and the crash reports page must be gone, and the

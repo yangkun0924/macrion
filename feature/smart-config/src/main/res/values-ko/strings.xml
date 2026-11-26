@@ -346,7 +346,7 @@
     <string name="field_dropdown_system_action_type_back">뒤로</string>
     <string name="field_dropdown_system_action_type_home">홈</string>
     <string name="field_dropdown_system_action_type_recent_apps">최근 앱</string>
-    <string name="field_dropdown_system_action_type_close_app">앱 종료 (마지막에 쓴 앱)</string>
+    <string name="field_dropdown_system_action_type_close_app">앱 종료 (자동화한 앱)</string>
     <string name="dialog_title_set_text_action">텍스트 입력</string>
     <string name="field_input_set_text_text_to_write_title">텍스트</string>
     <string name="field_set_text_validate_title">입력 확정</string>

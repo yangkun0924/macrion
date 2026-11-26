@@ -42,6 +42,12 @@ internal class ActionsEditor<Parent>(
     private var pendingCombination: Set<Identifier> = emptySet()
     private var sourceBeforeCombination: Pair<Action, Action>? = null
 
+    /**
+     * The action the user looked at last (opened, saved or just added): a new action goes right after it instead of
+     * at the end of the list. Null: new actions go at the end.
+     */
+    private var lastViewedActionId: Identifier? = null
+
     val intentExtraEditor: ListEditor<IntentExtra<out Any>, Action> = ListEditor(
         onListUpdated = ::onEditedActionIntentExtraUpdated,
         canBeEmpty = true,
@@ -72,6 +78,7 @@ internal class ActionsEditor<Parent>(
         parentReference = null
         editedSubActionIndex = -1
         super.startItemEdition(item)
+        if (editedList.value?.any { it.id == item.id } == true) lastViewedActionId = item.id
         when (val current = editedItem.value) {
             is Intent -> intentExtraEditor.startEdition(current.extras ?: emptyList())
             is ToggleEvent -> eventToggleEditor.startEdition(current.eventToggles)
@@ -88,6 +95,7 @@ internal class ActionsEditor<Parent>(
     }
 
     override fun stopEdition() {
+        lastViewedActionId = null
         parentSplitAction = null
         parentReference = null
         editedSubActionIndex = -1
@@ -131,7 +139,17 @@ internal class ActionsEditor<Parent>(
             sourceBeforeCombination = null
             stopItemEdition()
         } else {
-            super.upsertEditedItem()
+            val newItem = editedItem.value ?: return
+            val current = editedList.value ?: return
+            val anchor = current.indexOfFirst { it.id == lastViewedActionId }
+            if (anchor < 0 || current.any { it.id == newItem.id }) {
+                super.upsertEditedItem()
+            } else {
+                // A new action: right after the one the user was looking at.
+                updateList(current.toMutableList().apply { add(anchor + 1, newItem) })
+                stopItemEdition()
+            }
+            lastViewedActionId = newItem.id
         }
     }
 

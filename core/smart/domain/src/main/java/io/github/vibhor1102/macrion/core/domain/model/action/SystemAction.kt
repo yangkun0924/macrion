@@ -39,7 +39,7 @@ data class SystemAction(
         HOME,
         /** Open recent apps screen. */
         RECENT_APPS,
-        /** Close the app used last: swipe its card away in the recent apps screen, then go home. */
+        /** Close the app the scenario opened or touched (force stop from its App info page), then go home. */
         CLOSE_APP;
 
         fun toEntity(): SystemActionType = SystemActionType.valueOf(name)

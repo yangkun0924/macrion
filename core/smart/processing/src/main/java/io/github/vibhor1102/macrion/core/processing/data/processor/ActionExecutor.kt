@@ -409,7 +409,7 @@ internal class ActionExecutor(
 
     private suspend fun executeSystemAction(action: SystemAction) {
         if (action.type == SystemAction.Type.CLOSE_APP) {
-            androidExecutor.closeLastApp()
+            androidExecutor.closeAutomatedApp()
             return
         }
         val globalAction = when (action.type) {

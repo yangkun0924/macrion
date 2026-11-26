@@ -24,6 +24,7 @@ import android.content.Intent
 import android.util.AndroidRuntimeException
 import android.util.Log
 
+import io.github.vibhor1102.macrion.core.common.actions.app.AppCloser
 import io.github.vibhor1102.macrion.core.common.actions.gesture.GestureExecutor
 import io.github.vibhor1102.macrion.core.common.actions.gesture.GestureDispatchResult
 import io.github.vibhor1102.macrion.core.common.actions.model.ActionNotificationRequest
@@ -58,6 +59,7 @@ internal class AndroidActionExecutorImpl @Inject constructor(
     private val elementTapExecutor: ElementTapExecutor,
     private val soundExecutor: SoundExecutor,
     private val screenshotExecutor: ScreenshotExecutor,
+    private val appCloser: AppCloser,
 ) : AndroidActionExecutor {
 
     /** Keep the service in a week reference to avoid potential leak. */
@@ -87,6 +89,7 @@ internal class AndroidActionExecutorImpl @Inject constructor(
         notificationRequestExecutor.clear()
         soundExecutor.stopSound()
         screenshotExecutor.resetState()
+        appCloser.reset()
     }
 
     override fun clear() {
@@ -99,6 +102,7 @@ internal class AndroidActionExecutorImpl @Inject constructor(
 
     override suspend fun dispatchGesture(gestureDescription: GestureDescription): Unit = withContext(Dispatchers.Main.immediate) {
         val service = accessibilityService
+        service?.let(appCloser::onScreenTouched)
         val result = service?.let { gestureExecutor.dispatchGesture(it, gestureDescription) }
         currentCoroutineContext().ensureActive()
         if (result != GestureDispatchResult.COMPLETED) {
@@ -119,40 +123,10 @@ internal class AndroidActionExecutorImpl @Inject constructor(
         }
     }
 
-    override suspend fun closeLastApp() {
+    override suspend fun closeAutomatedApp() {
         val service = accessibilityService ?: return
-        val before = withContext(Dispatchers.Main.immediate) { service.activeWindowPackage() }
-        Log.i(TAG, "Close app: opening recent apps (app in front: $before)")
-        withContext(Dispatchers.Main.immediate) { performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS) }
-
-        // Wait for the recent apps screen, then for its opening animation to end.
-        val deadline = System.currentTimeMillis() + CLOSE_APP_RECENTS_TIMEOUT_MS
-        while (System.currentTimeMillis() < deadline) {
-            delay(CLOSE_APP_POLL_MS)
-            val now = withContext(Dispatchers.Main.immediate) { service.activeWindowPackage() }
-            if (now != null && now != before) break
-        }
-        delay(CLOSE_APP_SETTLE_MS)
-
-        // The card of the app used last is in the middle of the screen: fling it up to close it.
-        val metrics = service.resources.displayMetrics
-        val x = metrics.widthPixels / 2f
-        val path = Path().apply {
-            moveTo(x, metrics.heightPixels * 0.5f)
-            lineTo(x, metrics.heightPixels * 0.08f)
-        }
-        dispatchGesture(
-            GestureDescription.Builder()
-                .addStroke(GestureDescription.StrokeDescription(path, 0L, CLOSE_APP_SWIPE_DURATION_MS))
-                .build()
-        )
-        delay(CLOSE_APP_SETTLE_MS)
-        withContext(Dispatchers.Main.immediate) { performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME) }
-        Log.i(TAG, "Close app: swiped the last app away ($before)")
+        appCloser.closeAutomatedApp(service)
     }
-
-    private fun AccessibilityService.activeWindowPackage(): String? =
-        try { rootInActiveWindow?.packageName?.toString() } catch (_: Exception) { null }
 
     override fun writeTextOnFocusedItem(text: String, validate: Boolean) {
         val service = accessibilityService ?: return
@@ -177,6 +151,7 @@ internal class AndroidActionExecutorImpl @Inject constructor(
 
             when (lookup) {
                 ElementLookup.Clicked -> {
+                    withContext(Dispatchers.Main.immediate) { appCloser.onScreenTouched(service) }
                     Log.i(TAG, "Tapped element: $kind '$value'")
                     return true
                 }
@@ -236,6 +211,7 @@ internal class AndroidActionExecutorImpl @Inject constructor(
 
     override fun startActivity(intent: Intent) {
         val service = accessibilityService ?: return
+        appCloser.onAppStarted(service, intent.component?.packageName ?: intent.`package`)
 
         try {
             service.startActivity(intent)
@@ -294,10 +270,6 @@ private const val TAG = "ServiceActionExecutor"
 
 private const val ELEMENT_POLL_INTERVAL_MS = 250L
 private const val ELEMENT_TAP_DURATION_MS = 50L
-private const val CLOSE_APP_RECENTS_TIMEOUT_MS = 2_000L
-private const val CLOSE_APP_POLL_MS = 100L
-private const val CLOSE_APP_SETTLE_MS = 700L
-private const val CLOSE_APP_SWIPE_DURATION_MS = 200L
 private const val ELEMENT_SCROLL_SEARCH_AFTER_MS = 1_500L
 private const val ELEMENT_SCROLL_SETTLE_MS = 600L
 private const val ELEMENT_STILL_CHECK_MS = 200L

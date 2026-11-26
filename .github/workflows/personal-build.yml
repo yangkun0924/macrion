@@ -48,6 +48,11 @@ jobs:
           :core:smart:processing:testFDroidDebugUnitTest \
           :feature:backup:testFDroidDebugUnitTest
 
+    - name: Action editor tests (must pass)
+      run: ./gradlew --no-daemon --max-workers=4 :feature:smart-config:testFDroidDebugUnitTest --tests "*ActionInsertPositionTest" --tests "*CombinedActionEditingTest"
+      env:
+        JAVA_TOOL_OPTIONS: -Djava.net.preferIPv4Stack=true
+
     - name: Collect outputs
       run: |
         mkdir -p out
