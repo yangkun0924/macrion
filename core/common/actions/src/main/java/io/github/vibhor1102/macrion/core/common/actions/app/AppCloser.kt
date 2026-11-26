@@ -70,6 +70,7 @@ internal class AppCloser @Inject constructor() {
             Log.i(TAG, "Close app: $pkg force stopped=$confirmed")
         } else {
             Log.i(TAG, "Close app: no enabled force stop button for $pkg (already stopped?)")
+            withContext(Dispatchers.Main.immediate) { logScreen(service) }
         }
         delay(SETTLE_MS)
         withContext(Dispatchers.Main.immediate) { service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME) }
@@ -93,6 +94,24 @@ internal class AppCloser @Inject constructor() {
             if (clicked) return true
         }
         return false
+    }
+
+    /** What is on the screen when the button is not found, to know why on a phone. */
+    private fun logScreen(service: AccessibilityService) {
+        val active = service.rootInActiveWindow
+        Log.i(TAG, "Close app: active window ${active?.packageName}, windows: " +
+            (try { service.windows?.joinToString { "${it.type}:${it.root?.packageName}" } } catch (_: Exception) { null }))
+        val lines = ArrayList<String>()
+        fun walk(node: AccessibilityNodeInfo?, depth: Int) {
+            if (node == null || depth > 25 || lines.size >= 40) return
+            val text = node.text ?: node.contentDescription
+            if (!text.isNullOrBlank() || node.isClickable) {
+                lines += "'${text ?: ""}' id=${node.viewIdResourceName} click=${node.isClickable} enabled=${node.isEnabled}"
+            }
+            for (i in 0 until node.childCount) walk(node.getChild(i), depth + 1)
+        }
+        service.settingsRoots().forEach { walk(it, 0) }
+        lines.forEach { Log.i(TAG, "Close app: node $it") }
     }
 
     private fun AccessibilityService.settingsRoots(): List<AccessibilityNodeInfo> {
@@ -154,7 +173,7 @@ private val CONFIRM_TEXTS = listOf("OK", "확인")
 
 private val SYSTEM_PACKAGES = setOf("android", "com.android.systemui", "com.android.settings")
 private val SYSTEM_PACKAGE_PARTS = listOf("samsungpass", "biometrics", "authfw", "launcher")
-private const val FIND_TIMEOUT_MS = 5_000L
+private const val FIND_TIMEOUT_MS = 8_000L
 private const val POLL_MS = 250L
 private const val SETTLE_MS = 600L
 private const val MAX_PARENT_DEPTH = 4
